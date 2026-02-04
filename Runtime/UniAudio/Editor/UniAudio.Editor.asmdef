@@ -1,0 +1,36 @@
+{
+    "name": "UniAudio.Editor",
+    "rootNamespace": "UniCore.Editor.Audio",
+    "references": [
+        "UniSignal",
+        "Unity.Addressables",
+        "Unity.ResourceManager",
+        "UniAttribute",
+        "Unity.Addressables.Editor",
+        "UniAudio"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "1.0.0",
+            "define": "HAS_UNITASK"
+        },
+        {
+            "name": "com.unity.addressables",
+            "expression": "1.0.0",
+            "define": "HAS_ADDRESSABLES"
+        }
+    ],
+    "noEngineReferences": false
+}
