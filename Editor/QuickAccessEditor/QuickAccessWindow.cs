@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace UniCore.Editor.QuickAccess
 {
@@ -165,8 +166,27 @@ namespace UniCore.Editor.QuickAccess
         private static void ShowGroupMenu(GroupData group)
         {
             var menu = new GenericMenu();
-            menu.AddItem(new GUIContent("Delete Group"), false, () => { DeleteGroup(group); });
+            var index = QuickAccessStorage.Database().groups.IndexOf(group);
+
+            var upEnable = index != -1 && index != 0;
+            var downEnable = index != -1 && index != QuickAccessStorage.Database().groups.Count - 1;
+
+            AddItem(menu, new GUIContent("Move Up"), upEnable, () => MoveGroup(index, index - 1));
+            AddItem(menu, new GUIContent("Move Down"), downEnable, () => MoveGroup(index, index + 1));
+            menu.AddSeparator("");
+            menu.AddItem(new GUIContent("Delete Group"), false, () => DeleteGroup(group));
             menu.ShowAsContext();
+        }
+
+        private static void AddItem(GenericMenu menu, GUIContent content, bool enable, GenericMenu.MenuFunction callback)
+        {
+            if (enable)
+            {
+                menu.AddItem(content, false, callback);
+                return;
+            }
+
+            menu.AddDisabledItem(content);
         }
 
         private static void DeleteGroup(GroupData group)
@@ -174,7 +194,13 @@ namespace UniCore.Editor.QuickAccess
             var removedGuids = group.assets.Select(a => a.guidAsset).ToList();
             QuickAccessStorage.Database().groups.Remove(group);
             QuickAccessStorage.Database().stats.RemoveAll(s => removedGuids.Contains(s.guid));
+            QuickAccessStorage.Save(QuickAccessStorage.Database());
+        }
 
+        private static void MoveGroup(int index, int newIndex)
+        {
+            var groups = QuickAccessStorage.Database().groups;
+            (groups[index], groups[newIndex]) = (groups[newIndex], groups[index]);
             QuickAccessStorage.Save(QuickAccessStorage.Database());
         }
 
