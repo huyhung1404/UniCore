@@ -48,6 +48,10 @@ It helps structure large projects with clear data flow, explicit state managemen
   Attribute-driven metadata system for declarative runtime and tooling behavior.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
 
+* 🛠 **UniEditor**
+  Editor tooling framework for runtime inspection, debugging, and development workflows.
+  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
+
 ---
 
 ## 📦 Installation
