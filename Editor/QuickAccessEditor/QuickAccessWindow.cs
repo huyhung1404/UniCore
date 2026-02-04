@@ -215,6 +215,11 @@ namespace UniCore.Editor.QuickAccess
             var obj = AssetDatabase.LoadAssetAtPath<Object>(path);
             Selection.activeObject = obj;
             EditorGUIUtility.PingObject(obj);
+
+            AssetDatabase.OpenAsset(obj);
+            var fullName = obj.GetType().FullName;
+            if (fullName != null && fullName.Contains("UnityEditor.DefaultAsset")) AssetDatabase.OpenAsset(obj);
+
             QuickAccessFavorite.RegisterUse(a.guidAsset);
         }
 
