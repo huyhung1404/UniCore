@@ -16,13 +16,17 @@ It helps structure large projects with clear data flow, explicit state managemen
   Scoped, type-safe global state registry.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
 
+* 💾 **UniStorage**
+  Abstracted data storage layer for structured runtime and persistent data handling.
+  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniStorage/README.md)
+
+* 🔊 **UniAudio**
+  Modular audio playback and control layer for structured, event-driven sound management.
+  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniAudio/README.md)
+
 * 🔄 **UniState**
   Lightweight state machine for system and gameplay flow.
-  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
-
-* ⏱ **UniTaskLite**
-  Minimal scheduler for timed and frame-based execution.
-  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
+  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniState/README.md)
 
 * 🎯 **UniCommand**
   Structured, traceable gameplay action execution layer.
@@ -40,16 +44,8 @@ It helps structure large projects with clear data flow, explicit state managemen
   Runtime signal and state recording system.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
 
-* 💾 **UniStorage**
-  Abstracted data storage layer for structured runtime and persistent data handling.
-  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
-
-* 🏷 **UniAttribute**
+* 🧰 **UniAttribute**
   Attribute-driven metadata system for declarative runtime and tooling behavior.
-  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
-
-* 🛠 **UniEditor**
-  Editor tooling framework for runtime inspection, debugging, and development workflows.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
 
 ---

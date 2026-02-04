@@ -1,0 +1,32 @@
+{
+    "name": "UniAudio",
+    "rootNamespace": "UniCore.Audio",
+    "references": [
+        "UniSignal",
+        "UniTask",
+        "Unity.Addressables",
+        "UniTask.Addressables",
+        "Unity.ResourceManager",
+        "UniAttribute"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.cysharp.unitask",
+            "expression": "1.0.0",
+            "define": "HAS_UNITASK"
+        },
+        {
+            "name": "com.unity.addressables",
+            "expression": "1.0.0",
+            "define": "HAS_ADDRESSABLES"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -15,23 +15,23 @@ namespace UniCore.Storage
 
     public sealed class StorageSettings : ScriptableObject, ISettings
     {
-        public int version;
-        
-        public SerializationType serializationType = SerializationType.Json;
-        public InterfaceReference<ISerializer> serializerCustom;
+        [SerializeField] private int version;
 
-        public KeyType keyType = KeyType.Static;
-        public InterfaceReference<IKey> keyCustom;
+        [SerializeField] private SerializationType serializationType = SerializationType.Json;
+        [SerializeField] private InterfaceReference<ISerializer> serializerCustom;
 
-        public EncryptionType encryptionType = EncryptionType.None;
-        public InterfaceReference<IEncryptor> encryptorCustom;
+        [SerializeField] private KeyType keyType = KeyType.Static;
+        [SerializeField] private InterfaceReference<IKey> keyCustom;
 
-        public ProtectorType protectorType = ProtectorType.None;
-        public InterfaceReference<IProtector> protectorCustom;
+        [SerializeField] private EncryptionType encryptionType = EncryptionType.None;
+        [SerializeField] private InterfaceReference<IEncryptor> encryptorCustom;
 
-        public StorageType storageType = StorageType.LocalStorage;
-        public InterfaceReference<IStorageProvider> storageCustom;
-        
+        [SerializeField] private ProtectorType protectorType = ProtectorType.None;
+        [SerializeField] private InterfaceReference<IProtector> protectorCustom;
+
+        [SerializeField] private StorageType storageType = StorageType.LocalStorage;
+        [SerializeField] private InterfaceReference<IStorageProvider> storageCustom;
+
         public int Version => version;
 
         public ISerializer Serializer
