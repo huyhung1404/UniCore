@@ -16,6 +16,8 @@ namespace UniCore.Editor.Audio
         private SerializedProperty staticAddressProperty;
         private SerializedProperty customAddressProperty;
         private SerializedProperty soundEmitterPrefabProperty;
+        private SerializedProperty poolInitialSizeProperty;
+        private SerializedProperty outputMixerProperty;
         private string validationError;
         private string rootFolderPath;
         private string nodesFolderPath;
@@ -27,6 +29,8 @@ namespace UniCore.Editor.Audio
             staticAddressProperty = serializedObject.FindProperty("staticAddress");
             customAddressProperty = serializedObject.FindProperty("customAddress");
             soundEmitterPrefabProperty = serializedObject.FindProperty("soundEmitterPrefab");
+            poolInitialSizeProperty = serializedObject.FindProperty("poolInitialSize");
+            outputMixerProperty = serializedObject.FindProperty("outputMixer");
         }
 
         [MenuItem("UniCore/Settings/Audio", priority = 1)]
@@ -84,7 +88,9 @@ namespace UniCore.Editor.Audio
         {
             EditorGUILayout.LabelField("Configs", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(outputMixerProperty);
             EditorGUILayout.PropertyField(soundEmitterPrefabProperty);
+            EditorGUILayout.PropertyField(poolInitialSizeProperty);
             EditorGUI.indentLevel--;
         }
 
