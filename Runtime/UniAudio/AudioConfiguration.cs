@@ -3,7 +3,7 @@ using UnityEngine.Audio;
 
 namespace UniCore.Audio
 {
-    [CreateAssetMenu(menuName = "UniCore/Audio/Audio Configuration")]
+    [CreateAssetMenu(menuName = "UniCore/Audio/Configuration")]
     public class AudioConfiguration : ScriptableObject
     {
         public AudioMixerGroup output;
