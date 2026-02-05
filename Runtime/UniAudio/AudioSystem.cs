@@ -108,7 +108,7 @@ namespace UniCore.Audio
             _ = PlaySound(signal);
         }
 
-        private async UniTaskVoid PlaySound(PlaySoundSignal signal)
+        private static async UniTaskVoid PlaySound(PlaySoundSignal signal)
         {
             var (config, clipData) = await UniTask.WhenAll(GetConfiguration(signal.config), GetClipData(signal.clip));
             foreach (var clip in clipData.clips)
@@ -120,22 +120,22 @@ namespace UniCore.Audio
             ClipDataPool.Push(clipData);
         }
 
-        private async UniTask<AudioConfiguration> GetConfiguration(string config)
+        public static async UniTask<AudioConfiguration> GetConfiguration(string config)
         {
-            var handle = Addressables.LoadAssetAsync<AudioConfiguration>($"{settings.GroupAddress}/Configs/{config}.asset");
+            var handle = Addressables.LoadAssetAsync<AudioConfiguration>($"{instance.settings.GroupAddress}/Configs/{config}.asset");
             if (handle.IsDone && handle.IsValid()) return handle.Result;
             return await handle.ToUniTask();
         }
 
-        private async UniTask<ClipData> GetClipData(string clip)
+        public static async UniTask<ClipData> GetClipData(string clip)
         {
             var node = await GetClipNode(clip);
             return await node.GetClipData();
         }
 
-        private async UniTask<BaseAudioNode> GetClipNode(string clip)
+        public static async UniTask<BaseAudioNode> GetClipNode(string clip)
         {
-            var handle = Addressables.LoadAssetAsync<BaseAudioNode>($"{settings.GroupAddress}/Nodes/{clip}.asset");
+            var handle = Addressables.LoadAssetAsync<BaseAudioNode>($"{instance.settings.GroupAddress}/Nodes/{clip}.asset");
             if (handle.IsDone && handle.IsValid()) return handle.Result;
             return await handle.ToUniTask();
         }

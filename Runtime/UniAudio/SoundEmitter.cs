@@ -1,4 +1,5 @@
 ﻿#if HAS_UNITASK && HAS_ADDRESSABLES
+using Cysharp.Threading.Tasks;
 using UniCore.Audio.Pool;
 using UniCore.Signal;
 using UnityEngine;
@@ -6,7 +7,7 @@ using UnityEngine;
 namespace UniCore.Audio
 {
     [RequireComponent(typeof(AudioSource))]
-    public class SoundEmitter : MonoBehaviour, ISignalListener<StopSoundSignal>
+    public class SoundEmitter : MonoBehaviour, ISignalListener<StopSoundSignal>, ISignalListener<ChangeSoundSignal>
     {
         private AudioSource source;
         private int configHash = -1;
@@ -44,7 +45,8 @@ namespace UniCore.Audio
 
         private void RegisterSoundEvent()
         {
-            SignalSystem.Register(this);
+            SignalSystem.Register<StopSoundSignal>(this);
+            SignalSystem.Register<ChangeSoundSignal>(this);
         }
 
         private void Stop()
@@ -77,11 +79,62 @@ namespace UniCore.Audio
             NotifyBeingFinish();
         }
 
+        public void OnSignal(StopSoundSignal signal)
+        {
+            if (signal.soundId == soundId) Stop();
+        }
+        
+        public void OnSignal(ChangeSoundSignal signal)
+        {
+            if (signal.soundId != soundId) return;
+            _ = ChangeSound(signal.clip);
+        }
+
+        private async UniTaskVoid ChangeSound(string clipAddress)
+        {
+            if (!source) return;
+            var currentSoundId = soundId;
+            var clipData = await AudioSystem.GetClipData(clipAddress);
+            if (clipData == null || currentSoundId != soundId) return;
+            var newClip = clipData.clips[0];
+            const float fadeOutTime = 0.15f;
+            var startVolume = source.volume;
+            var t = 0f;
+
+            while (t < fadeOutTime && source && source.isPlaying)
+            {
+                t += Time.deltaTime;
+                source.volume = Mathf.Lerp(startVolume, 0f, t / fadeOutTime);
+                await UniTask.Yield();
+            }
+
+            source.Stop();
+            
+            source.clip = newClip;
+            source.time = 0f;
+            source.Play();
+            
+            if (!source.loop) timeRequire = newClip.length / Mathf.Abs(source.pitch);
+            
+            const float fadeInTime = 0.15f;
+            t = 0f;
+
+            while (t < fadeInTime && source)
+            {
+                t += Time.deltaTime;
+                source.volume = Mathf.Lerp(0f, startVolume, t / fadeInTime);
+                await UniTask.Yield();
+            }
+
+            source.volume = startVolume;
+        }
+
         private void OnDisable()
         {
             if (soundId != null)
             {
-                SignalSystem.Unregister(this);
+                SignalSystem.Unregister<StopSoundSignal>(this);
+                SignalSystem.Unregister<ChangeSoundSignal>(this);
                 SignalSystem.Dispatch(new SoundFinishSignal
                 {
                     soundId = soundId.Value
@@ -111,11 +164,6 @@ namespace UniCore.Audio
             source.rolloffMode = configuration.volumeRolloff;
             source.minDistance = configuration.minDistance;
             source.maxDistance = configuration.maxDistance;
-        }
-
-        public void OnSignal(StopSoundSignal signal)
-        {
-            if (signal.soundId == soundId) Stop();
         }
     }
 }

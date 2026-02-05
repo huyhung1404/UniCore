@@ -31,6 +31,12 @@ namespace UniCore.Audio
         public int? soundId;
     }
 
+    public struct ChangeSoundSignal : ISignalEvent
+    {
+        public int soundId;
+        public string clip;
+    }
+
     public struct StopSoundSignal : ISignalEvent
     {
         public int soundId;
