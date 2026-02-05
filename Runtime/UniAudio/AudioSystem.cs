@@ -32,6 +32,7 @@ namespace UniCore.Audio
 
         private void Awake()
         {
+            instance = this;
             settings = Resources.Load<AudioSettings>(nameof(AudioSettings));
             SoundEmitterPool.Prewarm(settings.PoolInitialSize);
 

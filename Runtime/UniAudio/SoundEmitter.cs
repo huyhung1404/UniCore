@@ -10,7 +10,7 @@ namespace UniCore.Audio
     public class SoundEmitter : MonoBehaviour, ISignalListener<StopSoundSignal>, ISignalListener<ChangeSoundSignal>
     {
         private AudioSource source;
-        private int configHash = -1;
+        private int? configHash;
         private float timeRequire;
         private bool needReturnToPool;
         private int? soundId;
@@ -24,7 +24,7 @@ namespace UniCore.Audio
         public void PlayAudioClip(in PlaySoundSignal signal, AudioClip clip, AudioConfiguration configuration)
         {
             source.clip = clip;
-            if (configuration != null && configHash != configuration.GetHashCode())
+            if (configuration != null && (configHash == null || configHash != configuration.GetHashCode()))
             {
                 configHash = configuration.GetHashCode();
                 UpdateConfig(configuration);
@@ -52,13 +52,13 @@ namespace UniCore.Audio
         private void Stop()
         {
             timeRequire = 0;
-            if (IsPlaying()) source.Stop();
+            source.Stop();
             NotifyBeingFinish();
         }
 
         public bool IsPlaying()
         {
-            return source.isPlaying;
+            return source.isPlaying && timeRequire > 0;
         }
 
         private void NotifyBeingFinish()
@@ -83,7 +83,7 @@ namespace UniCore.Audio
         {
             if (signal.soundId == soundId) Stop();
         }
-        
+
         public void OnSignal(ChangeSoundSignal signal)
         {
             if (signal.soundId != soundId) return;
@@ -109,13 +109,13 @@ namespace UniCore.Audio
             }
 
             source.Stop();
-            
+
             source.clip = newClip;
             source.time = 0f;
             source.Play();
-            
+
             if (!source.loop) timeRequire = newClip.length / Mathf.Abs(source.pitch);
-            
+
             const float fadeInTime = 0.15f;
             t = 0f;
 
@@ -141,6 +141,7 @@ namespace UniCore.Audio
                 });
             }
 
+            if (!IsPlaying()) return;
             Stop();
         }
 
