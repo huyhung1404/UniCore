@@ -15,6 +15,7 @@ namespace UniCore.Editor.Audio
         private SerializedProperty addressTypeProperty;
         private SerializedProperty staticAddressProperty;
         private SerializedProperty customAddressProperty;
+        private SerializedProperty soundEmitterPrefabProperty;
         private string validationError;
         private string rootFolderPath;
         private string nodesFolderPath;
@@ -25,6 +26,7 @@ namespace UniCore.Editor.Audio
             addressTypeProperty = serializedObject.FindProperty("addressType");
             staticAddressProperty = serializedObject.FindProperty("staticAddress");
             customAddressProperty = serializedObject.FindProperty("customAddress");
+            soundEmitterPrefabProperty = serializedObject.FindProperty("soundEmitterPrefab");
         }
 
         [MenuItem("UniCore/Settings/Audio", priority = 1)]
@@ -55,6 +57,7 @@ namespace UniCore.Editor.Audio
 
         public override void OnInspectorGUI()
         {
+            DrawSettings();
             DrawAddress();
             ValidateAddress();
             DrawFolderStructureGUI();
@@ -75,6 +78,14 @@ namespace UniCore.Editor.Audio
             var address = settings.GroupAddress;
             FixStructure(address);
             ValidateAddress();
+        }
+
+        private void DrawSettings()
+        {
+            EditorGUILayout.LabelField("Configs", EditorStyles.boldLabel);
+            EditorGUI.indentLevel++;
+            EditorGUILayout.PropertyField(soundEmitterPrefabProperty);
+            EditorGUI.indentLevel--;
         }
 
         private void DrawAddress()

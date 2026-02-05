@@ -9,8 +9,10 @@ namespace UniCore.Audio
         [SerializeField] private AddressGroupType addressType = AddressGroupType.Static;
         [SerializeField] private string staticAddress = "Assets/AudioSystem";
         [SerializeField] private InterfaceReference<IAddressGroup> customAddress;
+        [SerializeField] private SoundEmitter soundEmitterPrefab;
 
         public string GroupAddress => addressType == AddressGroupType.Static ? staticAddress : customAddress.Value.GetAddress();
+        public SoundEmitter SoundEmitterPrefab => soundEmitterPrefab;
     }
 }
 #endif
