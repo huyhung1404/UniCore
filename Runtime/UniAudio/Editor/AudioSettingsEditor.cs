@@ -17,7 +17,7 @@ namespace UniCore.Editor.Audio
         private SerializedProperty customAddressProperty;
         private string validationError;
         private string rootFolderPath;
-        private string clipsFolderPath;
+        private string nodesFolderPath;
         private string configsFolderPath;
 
         private void OnEnable()
@@ -100,7 +100,7 @@ namespace UniCore.Editor.Audio
         {
             validationError = null;
             rootFolderPath = null;
-            clipsFolderPath = null;
+            nodesFolderPath = null;
             configsFolderPath = null;
 
             var settings = (AudioSettings)target;
@@ -120,12 +120,12 @@ namespace UniCore.Editor.Audio
                 return;
             }
 
-            clipsFolderPath = $"{rootFolderPath}/Clips";
+            nodesFolderPath = $"{rootFolderPath}/Nodes";
             configsFolderPath = $"{rootFolderPath}/Configs";
 
             var missing = "";
-            if (!AssetDatabase.IsValidFolder(clipsFolderPath))
-                missing += "Clips folder missing. ";
+            if (!AssetDatabase.IsValidFolder(nodesFolderPath))
+                missing += "Nodes folder missing. ";
 
             if (!AssetDatabase.IsValidFolder(configsFolderPath))
                 missing += "Configs folder missing.";
@@ -148,11 +148,11 @@ namespace UniCore.Editor.Audio
                 AssetDatabase.CreateFolder(parent, folderName);
             }
 
-            clipsFolderPath = $"{rootFolderPath}/Clips";
+            nodesFolderPath = $"{rootFolderPath}/Nodes";
             configsFolderPath = $"{rootFolderPath}/Configs";
 
-            if (!AssetDatabase.IsValidFolder(clipsFolderPath))
-                AssetDatabase.CreateFolder(rootFolderPath, "Clips");
+            if (!AssetDatabase.IsValidFolder(nodesFolderPath))
+                AssetDatabase.CreateFolder(rootFolderPath, "Nodes");
 
             if (!AssetDatabase.IsValidFolder(configsFolderPath))
                 AssetDatabase.CreateFolder(rootFolderPath, "Configs");
@@ -202,7 +202,7 @@ namespace UniCore.Editor.Audio
                 DrawDefault(rootFolderPath);
 
                 EditorGUI.indentLevel++;
-                DrawDefault("Clips");
+                DrawDefault("Nodes");
                 DrawDefault("Configs");
                 EditorGUI.indentLevel -= 2;
 
@@ -212,7 +212,7 @@ namespace UniCore.Editor.Audio
             DrawFolderLine(rootFolderPath, true);
 
             EditorGUI.indentLevel++;
-            DrawFolderLine(System.IO.Path.GetFileName(clipsFolderPath), AssetDatabase.IsValidFolder(clipsFolderPath));
+            DrawFolderLine(System.IO.Path.GetFileName(nodesFolderPath), AssetDatabase.IsValidFolder(nodesFolderPath));
             DrawFolderLine(System.IO.Path.GetFileName(configsFolderPath), AssetDatabase.IsValidFolder(configsFolderPath));
             EditorGUI.indentLevel -= 2;
         }
