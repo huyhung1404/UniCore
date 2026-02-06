@@ -5,7 +5,8 @@
         "UniSignal",
         "UniVars",
         "UniAttribute",
-        "UniStorage"
+        "UniStorage",
+        "UniNotify"
     ],
     "includePlatforms": [
         "Editor"

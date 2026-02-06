@@ -13,5 +13,9 @@
     "name": "huyhung1404",
     "email": "huyhung1404@gmail.com",
     "url": "https://github.com/huyhung1404"
+  },
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.0",
+    "com.unity.nuget.newtonsoft-json": "3.0.0"
   }
 }

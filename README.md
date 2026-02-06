@@ -24,6 +24,10 @@ It helps structure large projects with clear data flow, explicit state managemen
   Modular audio playback and control layer for structured, event-driven sound management.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniAudio/README.md)
 
+* 📢 **UniNotify**
+  Lightweight runtime notification system for structured in-game and system messaging.
+  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniNotify/README.md)
+
 * 🔄 **UniState**
   Lightweight state machine for system and gameplay flow.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniState/README.md)
