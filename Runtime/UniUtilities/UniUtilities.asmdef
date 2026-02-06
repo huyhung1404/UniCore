@@ -1,7 +1,9 @@
 {
-    "name": "UniAttribute",
-    "rootNamespace": "UniCore.Attribute",
-    "references": [],
+    "name": "UniUtilities",
+    "rootNamespace": "UniCore.Utilities",
+    "references": [
+        "Unity.TextMeshPro"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

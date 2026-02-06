@@ -7,7 +7,7 @@
         "Unity.Addressables",
         "UniTask.Addressables",
         "Unity.ResourceManager",
-        "UniAttribute"
+        "UniUtilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

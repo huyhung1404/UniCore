@@ -28,6 +28,10 @@ It helps structure large projects with clear data flow, explicit state managemen
   Lightweight runtime notification system for structured in-game and system messaging.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniNotify/README.md)
 
+* 🧰 **UniUtilities**
+  Common low-level helpers and extensions supporting core runtime and tooling systems.
+  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniUtilities/README.md)
+
 * 🔄 **UniState**
   Lightweight state machine for system and gameplay flow.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniState/README.md)
@@ -46,10 +50,6 @@ It helps structure large projects with clear data flow, explicit state managemen
 
 * 📼 **UniTimeline**
   Runtime signal and state recording system.
-  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
-
-* 🧰 **UniAttribute**
-  Attribute-driven metadata system for declarative runtime and tooling behavior.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
 
 ---

@@ -4,9 +4,9 @@
     "references": [
         "UniSignal",
         "UniVars",
-        "UniAttribute",
         "UniStorage",
-        "UniNotify"
+        "UniNotify",
+        "UniUtilities"
     ],
     "includePlatforms": [
         "Editor"

@@ -2,7 +2,7 @@
     "name": "UniStorage",
     "rootNamespace": "UniCore.Storage",
     "references": [
-        "UniAttribute"
+        "UniUtilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

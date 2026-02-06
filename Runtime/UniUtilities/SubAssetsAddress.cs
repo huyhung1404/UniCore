@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace UniCore.Attribute
+namespace UniCore.Utilities
 {
     [Serializable]
     public class SubAssetsAddress
