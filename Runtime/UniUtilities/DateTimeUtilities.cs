@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Globalization;
+using TMPro;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -55,6 +57,245 @@ namespace UniCore.Utilities
         public static double DaysBetween(this DateTime a, DateTime b) => (a - b).TotalDays;
 
         public static bool IsSameDay(this DateTime a, DateTime b) => a.Date == b.Date;
+
+        #region Count Down
+
+        public class CountDownBuilder
+        {
+            internal TMP_Text text;
+            internal double second;
+            internal bool isRealtime = true;
+            internal float interval = 1;
+            internal Action onCompleted;
+            internal ICountDownTick onTick;
+        }
+
+        public static CountDownBuilder CountDown(this TMP_Text text, double second)
+        {
+            return new CountDownBuilder { text = text, second = second };
+        }
+
+        public static CountDownBuilder SetUpdate(this CountDownBuilder builder, bool isRealTime)
+        {
+            builder.isRealtime = isRealTime;
+            return builder;
+        }
+
+        public static CountDownBuilder SetInterval(this CountDownBuilder builder, float interval)
+        {
+            builder.interval = interval;
+            return builder;
+        }
+
+        public static CountDownBuilder OnCompleted(this CountDownBuilder builder, Action onCompleted)
+        {
+            builder.onCompleted = onCompleted;
+            return builder;
+        }
+
+        public static CountDownBuilder OnTick(this CountDownBuilder builder, ICountDownTick onTick)
+        {
+            builder.onTick = onTick;
+            return builder;
+        }
+
+        public static CountDownBuilder ToDayTime(this CountDownBuilder builder, char separator = ' ')
+        {
+            builder.onTick = new CountDownTickDayTime(separator);
+            return builder;
+        }
+
+        public static CountDownBuilder ToDayTimeWithDay(this CountDownBuilder builder, char separator = ' ')
+        {
+            builder.onTick = new CountDownTickDayTimeWithDay(separator);
+            return builder;
+        }
+
+        public static CountDown Build(this CountDownBuilder builder)
+        {
+            return new CountDown(builder.text,
+                builder.second,
+                builder.isRealtime,
+                builder.interval,
+                builder.onCompleted,
+                builder.onTick ?? new CountDownTickDayTime(' ')
+            );
+        }
+
+        #endregion
+    }
+
+    public interface ICountDownTick
+    {
+        public void OnTick(TMP_Text text, in TimeSpan remainingTime);
+
+        internal static int WriteNumber(char[] buffer, long value, int index)
+        {
+            if (value == 0)
+            {
+                buffer[index] = '0';
+                return index + 1;
+            }
+
+            var start = index;
+            while (value > 0)
+            {
+                buffer[index++] = (char)('0' + (value % 10));
+                value /= 10;
+            }
+
+            Array.Reverse(buffer, start, index - start);
+            return index;
+        }
+
+        internal static void WriteTwoDigits(char[] buffer, int value, int index)
+        {
+            buffer[index] = (char)('0' + value / 10);
+            buffer[index + 1] = (char)('0' + value % 10);
+        }
+    }
+
+    public class CountDownTickDayTime : ICountDownTick
+    {
+        private readonly char separator;
+        private readonly char[] buffer = new char[16];
+
+        public CountDownTickDayTime(char separator)
+        {
+            this.separator = separator;
+        }
+
+        public void OnTick(TMP_Text text, in TimeSpan remainingTime)
+        {
+            int length;
+
+            if (remainingTime.TotalHours >= 1)
+            {
+                var hours = (long)remainingTime.TotalHours;
+                var minutes = remainingTime.Minutes;
+
+                length = ICountDownTick.WriteNumber(buffer, hours, 0);
+                buffer[length++] = separator;
+                ICountDownTick.WriteTwoDigits(buffer, minutes, length);
+            }
+            else
+            {
+                var minutes = remainingTime.Minutes;
+                var seconds = remainingTime.Seconds;
+
+                length = ICountDownTick.WriteNumber(buffer, minutes, 0);
+                buffer[length++] = separator;
+                ICountDownTick.WriteTwoDigits(buffer, seconds, length);
+            }
+
+            length += 2;
+
+            text.SetCharArray(buffer, 0, length);
+        }
+    }
+
+    public class CountDownTickDayTimeWithDay : ICountDownTick
+    {
+        private readonly char separator;
+        private readonly char[] buffer = new char[20];
+
+        public CountDownTickDayTimeWithDay(char separator)
+        {
+            this.separator = separator;
+        }
+
+        public void OnTick(TMP_Text text, in TimeSpan remainingTime)
+        {
+            int length;
+
+            if (remainingTime.Days > 0)
+            {
+                length = ICountDownTick.WriteNumber(buffer, remainingTime.Days, 0);
+                buffer[length++] = separator;
+                ICountDownTick.WriteTwoDigits(buffer, remainingTime.Hours, length);
+            }
+            else if (remainingTime.TotalHours >= 1)
+            {
+                var hours = (long)remainingTime.TotalHours;
+                length = ICountDownTick.WriteNumber(buffer, hours, 0);
+                buffer[length++] = separator;
+                ICountDownTick.WriteTwoDigits(buffer, remainingTime.Minutes, length);
+            }
+            else
+            {
+                length = ICountDownTick.WriteNumber(buffer, remainingTime.Minutes, 0);
+                buffer[length++] = separator;
+                ICountDownTick.WriteTwoDigits(buffer, remainingTime.Seconds, length);
+            }
+
+            length += 2;
+
+            text.SetCharArray(buffer, 0, length);
+        }
+    }
+
+    public class CountDown
+    {
+        private readonly TMP_Text text;
+        private readonly bool isRealtime;
+        private readonly float interval;
+        private TimeSpan timeSpan;
+        private Action onCompleted;
+        private ICountDownTick onTick;
+        private Coroutine coroutine;
+        private float startTime;
+        private WaitForSecondsRealtime waitRealtime;
+        private WaitForSeconds wait;
+
+        public CountDown(TMP_Text text, double second, bool isRealtime, float interval, Action onCompleted, ICountDownTick onTick)
+        {
+            this.text = text;
+            this.isRealtime = isRealtime;
+            this.interval = interval;
+            this.onCompleted = onCompleted;
+            this.onTick = onTick;
+            timeSpan = TimeSpan.FromSeconds(second);
+        }
+
+        public void Start()
+        {
+            if (coroutine != null)
+            {
+                Stop();
+            }
+            else
+            {
+                startTime = isRealtime ? Time.realtimeSinceStartup : Time.time;
+                if (isRealtime) waitRealtime = new WaitForSecondsRealtime(interval);
+                else wait = new WaitForSeconds(interval);
+            }
+
+            coroutine = text.StartCoroutine(IECountDown());
+        }
+
+        public void Stop()
+        {
+            if (coroutine == null) return;
+            text.StopCoroutine(coroutine);
+        }
+
+        private IEnumerator IECountDown()
+        {
+            while (timeSpan.TotalSeconds > 0)
+            {
+                onTick.OnTick(text, timeSpan);
+                yield return isRealtime ? waitRealtime : wait;
+                var currentTime = isRealtime ? Time.realtimeSinceStartup : Time.time;
+                var duration = currentTime - startTime;
+                timeSpan -= TimeSpan.FromSeconds(duration);
+                startTime = currentTime;
+            }
+
+            onTick.OnTick(text, TimeSpan.Zero);
+
+            onCompleted?.Invoke();
+            Stop();
+        }
     }
 
 #if UNITY_EDITOR
