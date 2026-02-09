@@ -4,7 +4,7 @@ namespace TMPro
 {
     public static class TMP_TextUtility
     {
-        private static readonly char[] arr = new char[12];
+        private static readonly char[] arr = new char[64];
 
         private static int charIndex;
 
