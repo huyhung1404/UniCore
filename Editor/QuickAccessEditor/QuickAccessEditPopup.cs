@@ -5,15 +5,15 @@ namespace UniCore.Editor.QuickAccess
 {
     public class QuickAccessEditPopup : EditorWindow
     {
-        private AssetAddress asset;
-        private Color colorValue;
-        private bool isFavorite;
+        private AssetAddress _asset;
+        private Color _colorValue;
+        private bool _isFavorite;
 
         public static void Open(AssetAddress a, bool isFav)
         {
             var w = CreateInstance<QuickAccessEditPopup>();
-            w.asset = a;
-            w.isFavorite = isFav;
+            w._asset = a;
+            w._isFavorite = isFav;
             var mousePos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
             var size = new Vector2(260, 60);
             w.position = new Rect(mousePos.x, mousePos.y, size.x, size.y);
@@ -29,7 +29,7 @@ namespace UniCore.Editor.QuickAccess
             var db = QuickAccessStorage.Database();
             
             EditorGUI.BeginChangeCheck();
-            asset.name = EditorGUILayout.TextField("Name", asset.name);
+            _asset.Name = EditorGUILayout.TextField("Name", _asset.Name);
             if (EditorGUI.EndChangeCheck())
             {
                 QuickAccessStorage.Save(db);
@@ -40,16 +40,16 @@ namespace UniCore.Editor.QuickAccess
 
             if (GUILayout.Button("Delete"))
             {
-                if (isFavorite)
+                if (_isFavorite)
                 {
-                    db.stats.RemoveAll(s => s.guid == asset.guidAsset);
+                    db.Stats.RemoveAll(s => s.GUID == _asset.GuidAsset);
                 }
                 else
                 {
-                    foreach (var g in db.groups)
-                        g.assets.Remove(asset);
+                    foreach (var g in db.Groups)
+                        g.Assets.Remove(_asset);
 
-                    db.stats.RemoveAll(s => s.guid == asset.guidAsset);
+                    db.Stats.RemoveAll(s => s.GUID == _asset.GuidAsset);
                 }
 
                 QuickAccessStorage.Save(db);

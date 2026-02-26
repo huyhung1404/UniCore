@@ -6,16 +6,16 @@ namespace UniCore.Audio
 {
     public class ClipData
     {
-        public readonly List<AudioClip> clips;
+        public readonly List<AudioClip> Clips;
 
         public ClipData()
         {
-            clips = new List<AudioClip>(4);
+            Clips = new List<AudioClip>(4);
         }
 
         public void Clear()
         {
-            clips.Clear();
+            Clips.Clear();
         }
     }
 }

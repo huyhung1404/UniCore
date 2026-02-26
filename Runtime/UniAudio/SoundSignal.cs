@@ -5,45 +5,45 @@ namespace UniCore.Audio
 {
     public struct ChangeMasterVolumeSignal : ISignalEvent
     {
-        public float volume;
+        public float Volume;
     }
 
     public struct ChangeMusicVolumeSignal : ISignalEvent
     {
-        public float volume;
+        public float Volume;
     }
 
     public struct ChangeSFXVolumeSignal : ISignalEvent
     {
-        public float volume;
+        public float Volume;
     }
 
     public struct PlaySoundSignal : ISignalEvent
     {
-        public string clip;
-        public string config;
+        public string Clip;
+        public string Config;
 
-        public bool isLoop;
+        public bool IsLoop;
 
-        public Vector3 position;
-        public Transform parent;
+        public Vector3 Position;
+        public Transform Parent;
 
-        public int? soundId;
+        public int? SoundId;
     }
 
     public struct ChangeSoundSignal : ISignalEvent
     {
-        public int soundId;
-        public string clip;
+        public int SoundId;
+        public string Clip;
     }
 
     public struct StopSoundSignal : ISignalEvent
     {
-        public int soundId;
+        public int SoundId;
     }
 
     public struct SoundFinishSignal : ISignalEvent
     {
-        public int soundId;
+        public int SoundId;
     }
 }

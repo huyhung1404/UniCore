@@ -22,13 +22,13 @@ namespace UniCore.Utilities
 
     public static class DateTimeUtilities
     {
-        public const string FORMAT = "yyyy-MM-dd HH:mm:ss";
+        public const string k_Format = "yyyy-MM-dd HH:mm:ss";
 
         public static DateTime ToDateTime(this long time) => new DateTime(time);
 
-        public static string ToText(this DateTime dt) => dt.ToString(FORMAT);
+        public static string ToText(this DateTime dt) => dt.ToString(k_Format);
 
-        public static DateTime ToDateTime(this string text) => DateTime.ParseExact(text, FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None);
+        public static DateTime ToDateTime(this string text) => DateTime.ParseExact(text, k_Format, CultureInfo.InvariantCulture, DateTimeStyles.None);
 
         public static DateTime StartOfDay(this DateTime dt) => dt.Date;
 
@@ -157,12 +157,12 @@ namespace UniCore.Utilities
 
     public class CountDownTickDayTime : ICountDownTick
     {
-        private readonly char separator;
-        private readonly char[] buffer = new char[16];
+        private readonly char _separator;
+        private readonly char[] _buffer = new char[16];
 
         public CountDownTickDayTime(char separator)
         {
-            this.separator = separator;
+            _separator = separator;
         }
 
         public void OnTick(TMP_Text text, in TimeSpan remainingTime)
@@ -174,34 +174,34 @@ namespace UniCore.Utilities
                 var hours = (long)remainingTime.TotalHours;
                 var minutes = remainingTime.Minutes;
 
-                length = ICountDownTick.WriteNumber(buffer, hours, 0);
-                buffer[length++] = separator;
-                ICountDownTick.WriteTwoDigits(buffer, minutes, length);
+                length = ICountDownTick.WriteNumber(_buffer, hours, 0);
+                _buffer[length++] = _separator;
+                ICountDownTick.WriteTwoDigits(_buffer, minutes, length);
             }
             else
             {
                 var minutes = remainingTime.Minutes;
                 var seconds = remainingTime.Seconds;
 
-                length = ICountDownTick.WriteNumber(buffer, minutes, 0);
-                buffer[length++] = separator;
-                ICountDownTick.WriteTwoDigits(buffer, seconds, length);
+                length = ICountDownTick.WriteNumber(_buffer, minutes, 0);
+                _buffer[length++] = _separator;
+                ICountDownTick.WriteTwoDigits(_buffer, seconds, length);
             }
 
             length += 2;
 
-            text.SetCharArray(buffer, 0, length);
+            text.SetCharArray(_buffer, 0, length);
         }
     }
 
     public class CountDownTickDayTimeWithDay : ICountDownTick
     {
-        private readonly char separator;
-        private readonly char[] buffer = new char[20];
+        private readonly char _separator;
+        private readonly char[] _buffer = new char[20];
 
         public CountDownTickDayTimeWithDay(char separator)
         {
-            this.separator = separator;
+            _separator = separator;
         }
 
         public void OnTick(TMP_Text text, in TimeSpan remainingTime)
@@ -210,90 +210,90 @@ namespace UniCore.Utilities
 
             if (remainingTime.Days > 0)
             {
-                length = ICountDownTick.WriteNumber(buffer, remainingTime.Days, 0);
-                buffer[length++] = separator;
-                ICountDownTick.WriteTwoDigits(buffer, remainingTime.Hours, length);
+                length = ICountDownTick.WriteNumber(_buffer, remainingTime.Days, 0);
+                _buffer[length++] = _separator;
+                ICountDownTick.WriteTwoDigits(_buffer, remainingTime.Hours, length);
             }
             else if (remainingTime.TotalHours >= 1)
             {
                 var hours = (long)remainingTime.TotalHours;
-                length = ICountDownTick.WriteNumber(buffer, hours, 0);
-                buffer[length++] = separator;
-                ICountDownTick.WriteTwoDigits(buffer, remainingTime.Minutes, length);
+                length = ICountDownTick.WriteNumber(_buffer, hours, 0);
+                _buffer[length++] = _separator;
+                ICountDownTick.WriteTwoDigits(_buffer, remainingTime.Minutes, length);
             }
             else
             {
-                length = ICountDownTick.WriteNumber(buffer, remainingTime.Minutes, 0);
-                buffer[length++] = separator;
-                ICountDownTick.WriteTwoDigits(buffer, remainingTime.Seconds, length);
+                length = ICountDownTick.WriteNumber(_buffer, remainingTime.Minutes, 0);
+                _buffer[length++] = _separator;
+                ICountDownTick.WriteTwoDigits(_buffer, remainingTime.Seconds, length);
             }
 
             length += 2;
 
-            text.SetCharArray(buffer, 0, length);
+            text.SetCharArray(_buffer, 0, length);
         }
     }
 
     public class CountDown
     {
-        private readonly TMP_Text text;
-        private readonly bool isRealtime;
-        private readonly float interval;
-        private TimeSpan timeSpan;
-        private Action onCompleted;
-        private ICountDownTick onTick;
-        private Coroutine coroutine;
-        private float startTime;
-        private WaitForSecondsRealtime waitRealtime;
-        private WaitForSeconds wait;
+        private readonly TMP_Text _text;
+        private readonly bool _isRealtime;
+        private readonly float _interval;
+        private TimeSpan _timeSpan;
+        private Action _onCompleted;
+        private ICountDownTick _onTick;
+        private Coroutine _coroutine;
+        private float _startTime;
+        private WaitForSecondsRealtime _waitRealtime;
+        private WaitForSeconds _wait;
 
         public CountDown(TMP_Text text, double second, bool isRealtime, float interval, Action onCompleted, ICountDownTick onTick)
         {
-            this.text = text;
-            this.isRealtime = isRealtime;
-            this.interval = interval;
-            this.onCompleted = onCompleted;
-            this.onTick = onTick;
-            timeSpan = TimeSpan.FromSeconds(second);
+            _text = text;
+            _isRealtime = isRealtime;
+            _interval = interval;
+            _onCompleted = onCompleted;
+            _onTick = onTick;
+            _timeSpan = TimeSpan.FromSeconds(second);
         }
 
         public void Start()
         {
-            if (coroutine != null)
+            if (_coroutine != null)
             {
                 Stop();
             }
             else
             {
-                startTime = isRealtime ? Time.realtimeSinceStartup : Time.time;
-                if (isRealtime) waitRealtime = new WaitForSecondsRealtime(interval);
-                else wait = new WaitForSeconds(interval);
+                _startTime = _isRealtime ? Time.realtimeSinceStartup : Time.time;
+                if (_isRealtime) _waitRealtime = new WaitForSecondsRealtime(_interval);
+                else _wait = new WaitForSeconds(_interval);
             }
 
-            coroutine = text.StartCoroutine(IECountDown());
+            _coroutine = _text.StartCoroutine(IECountDown());
         }
 
         public void Stop()
         {
-            if (coroutine == null) return;
-            text.StopCoroutine(coroutine);
+            if (_coroutine == null) return;
+            _text.StopCoroutine(_coroutine);
         }
 
         private IEnumerator IECountDown()
         {
-            while (timeSpan.TotalSeconds > 0)
+            while (_timeSpan.TotalSeconds > 0)
             {
-                onTick.OnTick(text, timeSpan);
-                yield return isRealtime ? waitRealtime : wait;
-                var currentTime = isRealtime ? Time.realtimeSinceStartup : Time.time;
-                var duration = currentTime - startTime;
-                timeSpan -= TimeSpan.FromSeconds(duration);
-                startTime = currentTime;
+                _onTick.OnTick(_text, _timeSpan);
+                yield return _isRealtime ? _waitRealtime : _wait;
+                var currentTime = _isRealtime ? Time.realtimeSinceStartup : Time.time;
+                var duration = currentTime - _startTime;
+                _timeSpan -= TimeSpan.FromSeconds(duration);
+                _startTime = currentTime;
             }
 
-            onTick.OnTick(text, TimeSpan.Zero);
+            _onTick.OnTick(_text, TimeSpan.Zero);
 
-            onCompleted?.Invoke();
+            _onCompleted?.Invoke();
             Stop();
         }
     }
@@ -302,8 +302,8 @@ namespace UniCore.Utilities
     [CustomPropertyDrawer(typeof(TicksAttribute))]
     public class TicksDrawer : PropertyDrawer
     {
-        private static readonly Color k_UtcColor = new Color(0.4f, 0.8f, 1f);
-        private static readonly Color k_LocalColor = new Color(0.6f, 1f, 0.6f);
+        private static readonly Color s_utcColor = new Color(0.4f, 0.8f, 1f);
+        private static readonly Color s_localColor = new Color(0.6f, 1f, 0.6f);
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -321,12 +321,12 @@ namespace UniCore.Utilities
             try
             {
                 var dt = new DateTime(ticks, attr.IsUTC ? DateTimeKind.Utc : DateTimeKind.Local);
-                displayText = dt.ToString(DateTimeUtilities.FORMAT);
+                displayText = dt.ToString(DateTimeUtilities.k_Format);
             }
             catch
             {
                 property.longValue = 0;
-                displayText = new DateTime(0).ToString(DateTimeUtilities.FORMAT);
+                displayText = new DateTime(0).ToString(DateTimeUtilities.k_Format);
             }
 
             EditorGUI.BeginProperty(position, label, property);
@@ -344,14 +344,14 @@ namespace UniCore.Utilities
             {
                 property.longValue = 0;
             }
-            else if (DateTime.TryParseExact(input, DateTimeUtilities.FORMAT, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            else if (DateTime.TryParseExact(input, DateTimeUtilities.k_Format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
             {
                 parsed = DateTime.SpecifyKind(parsed, attr.IsUTC ? DateTimeKind.Utc : DateTimeKind.Local);
                 property.longValue = parsed.Ticks;
             }
 
             var prevColor = GUI.color;
-            GUI.color = attr.IsUTC ? k_UtcColor : k_LocalColor;
+            GUI.color = attr.IsUTC ? s_utcColor : s_localColor;
 
             var labelBtn = attr.IsUTC ? "UTC" : "Local";
             if (GUI.Button(buttonRect, new GUIContent(labelBtn, "Set current time")))

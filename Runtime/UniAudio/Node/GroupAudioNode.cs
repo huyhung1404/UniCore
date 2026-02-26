@@ -5,7 +5,7 @@ namespace UniCore.Audio.Node
 {
     public abstract class GroupAudioNode : BaseAudioNode
     {
-        [SerializeField] protected AudioClipReference[] references;
+        [SerializeField] protected AudioClipReference[] _references;
     }
 }
 #endif

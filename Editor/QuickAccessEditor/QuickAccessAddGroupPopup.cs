@@ -5,7 +5,7 @@ namespace UniCore.Editor.QuickAccess
 {
     internal class QuickAccessAddGroupPopup : EditorWindow
     {
-        private string groupName = "New Group";
+        private string _groupName = "New Group";
 
         public static void Open(Rect parentWindowRect)
         {
@@ -25,7 +25,7 @@ namespace UniCore.Editor.QuickAccess
             PopupGUI.BeginPopup();
             using (new EditorGUILayout.VerticalScope())
             {
-                groupName = EditorGUILayout.TextField("Group Name", groupName);
+                _groupName = EditorGUILayout.TextField("Group Name", _groupName);
 
                 GUILayout.FlexibleSpace();
 
@@ -33,7 +33,7 @@ namespace UniCore.Editor.QuickAccess
                 {
                     if (GroupNameValid(QuickAccessStorage.Database()))
                     {
-                        QuickAccessStorage.Database().groups.Add(new GroupData { groupName = groupName });
+                        QuickAccessStorage.Database().Groups.Add(new GroupData { GroupName = _groupName });
                         QuickAccessStorage.Save(QuickAccessStorage.Database());
                     }
 
@@ -46,14 +46,14 @@ namespace UniCore.Editor.QuickAccess
 
         private bool GroupNameValid(QuickAccessDB db)
         {
-            if (string.IsNullOrEmpty(groupName))
+            if (string.IsNullOrEmpty(_groupName))
             {
                 Debug.LogError("Group name cannot be empty");
                 return false;
             }
 
-            var r = !db.groups.Exists(g => g.groupName == groupName);
-            if (!r) Debug.LogError($"Group name [{groupName}] already exists");
+            var r = !db.Groups.Exists(g => g.GroupName == _groupName);
+            if (!r) Debug.LogError($"Group name [{_groupName}] already exists");
             return r;
         }
     }

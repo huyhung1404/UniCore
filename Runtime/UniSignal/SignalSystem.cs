@@ -5,7 +5,7 @@ namespace UniCore.Signal
 {
     public static class SignalSystem
     {
-        internal static readonly Dictionary<Type, IListenerList> listeners = new Dictionary<Type, IListenerList>(32);
+        internal static readonly Dictionary<Type, IListenerList> s_Listeners = new Dictionary<Type, IListenerList>(32);
 
         public static void Register<T>(ISignalListener<T> listener) where T : ISignalEvent
         {
@@ -15,10 +15,10 @@ namespace UniCore.Signal
 
         internal static void Register(Type signalType, object listener)
         {
-            if (!listeners.TryGetValue(signalType, out var raw))
+            if (!s_Listeners.TryGetValue(signalType, out var raw))
             {
                 raw = CreateList(signalType);
-                listeners[signalType] = raw;
+                s_Listeners[signalType] = raw;
             }
 
             raw.Add(listener);
@@ -38,31 +38,31 @@ namespace UniCore.Signal
 
         internal static void Unregister(Type signalType, object listener)
         {
-            if (listeners.TryGetValue(signalType, out var raw)) raw.Remove(listener);
+            if (s_Listeners.TryGetValue(signalType, out var raw)) raw.Remove(listener);
         }
 
         public static void Dispatch<T>(T signal) where T : ISignalEvent => Dispatch(signal, signal.Scope);
 
         public static void Dispatch<T>(T signal, SignalScope scope) where T : ISignalEvent
         {
-            if (listeners.TryGetValue(typeof(T), out var raw)) ((ListenerList<T>)raw).Dispatch(signal, scope);
+            if (s_Listeners.TryGetValue(typeof(T), out var raw)) ((ListenerList<T>)raw).Dispatch(signal, scope);
         }
 
         public static void ReleaseEmptyLists()
         {
-            if (listeners.Count == 0) return;
+            if (s_Listeners.Count == 0) return;
             var temp = new List<Type>(16);
-            foreach (var kvp in listeners)
+            foreach (var kvp in s_Listeners)
             {
                 if (kvp.Value.Count == 0) temp.Add(kvp.Key);
             }
 
-            for (var i = 0; i < temp.Count; i++) listeners.Remove(temp[i]);
+            for (var i = 0; i < temp.Count; i++) s_Listeners.Remove(temp[i]);
         }
 
         public static void Clear()
         {
-            listeners.Clear();
+            s_Listeners.Clear();
         }
     }
 }

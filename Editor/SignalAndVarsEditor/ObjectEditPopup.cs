@@ -7,21 +7,21 @@ namespace UniCore.Editor
 {
     public class ObjectEditPopup : EditorWindow
     {
-        private object target;
-        private Type targetType;
-        private Action<object> onApply;
-        private int fieldCount;
+        private object _target;
+        private Type _targetType;
+        private Action<object> _onApply;
+        private int _fieldCount;
 
         public static void Open(string title, object value, Action<object> onApply)
         {
             var window = CreateInstance<ObjectEditPopup>();
             if (value != null)
             {
-                window.target = Clone(value);
-                window.targetType = value.GetType();
+                window._target = Clone(value);
+                window._targetType = value.GetType();
             }
 
-            window.onApply = onApply;
+            window._onApply = onApply;
             window.titleContent = new GUIContent(title);
             window.CalculateFieldCount();
             window.FitSizeToContent();
@@ -32,16 +32,16 @@ namespace UniCore.Editor
         {
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
 
-            fieldCount = 0;
+            _fieldCount = 0;
 
-            foreach (var field in targetType.GetFields(flags))
+            foreach (var field in _targetType.GetFields(flags))
             {
-                if (!field.IsInitOnly) fieldCount++;
+                if (!field.IsInitOnly) _fieldCount++;
             }
 
-            foreach (var prop in targetType.GetProperties(flags))
+            foreach (var prop in _targetType.GetProperties(flags))
             {
-                if (prop.CanWrite && prop.GetIndexParameters().Length == 0) fieldCount++;
+                if (prop.CanWrite && prop.GetIndexParameters().Length == 0) _fieldCount++;
             }
         }
 
@@ -50,11 +50,11 @@ namespace UniCore.Editor
             var line = EditorGUIUtility.singleLineHeight;
             const float spacing = 4f;
             var height = line * 1.5f + spacing * 4f;
-            height += fieldCount * (line + spacing);
+            height += _fieldCount * (line + spacing);
             height += line * 1.8f;
 
             const float width = 360f;
-            if (fieldCount > 12)
+            if (_fieldCount > 12)
             {
                 minSize = new Vector2(width, 400);
                 maxSize = new Vector2(width, 600);
@@ -67,14 +67,14 @@ namespace UniCore.Editor
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField(targetType.Name, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(_targetType.Name, EditorStyles.boldLabel);
             EditorGUILayout.Space();
 
             DrawFields();
             
             GUILayout.FlexibleSpace();
             if (!GUILayout.Button("Apply")) return;
-            onApply?.Invoke(target);
+            _onApply?.Invoke(_target);
             Close();
         }
 
@@ -82,27 +82,27 @@ namespace UniCore.Editor
         {
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
 
-            foreach (var field in targetType.GetFields(flags))
+            foreach (var field in _targetType.GetFields(flags))
             {
                 if (field.IsInitOnly) continue;
 
-                var value = field.GetValue(target);
+                var value = field.GetValue(_target);
                 var newValue = DrawValue(field.FieldType, field.Name, value);
 
                 if (!Equals(value, newValue))
-                    field.SetValue(target, newValue);
+                    field.SetValue(_target, newValue);
             }
 
-            foreach (var prop in targetType.GetProperties(flags))
+            foreach (var prop in _targetType.GetProperties(flags))
             {
                 if (!prop.CanWrite || prop.GetIndexParameters().Length > 0)
                     continue;
 
-                var value = prop.GetValue(target);
+                var value = prop.GetValue(_target);
                 var newValue = DrawValue(prop.PropertyType, prop.Name, value);
 
                 if (!Equals(value, newValue))
-                    prop.SetValue(target, newValue);
+                    prop.SetValue(_target, newValue);
             }
         }
 

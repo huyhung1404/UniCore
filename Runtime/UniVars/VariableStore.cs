@@ -5,16 +5,16 @@ namespace UniCore.Vars
 {
     public sealed class VariableStore
     {
-        private readonly Dictionary<string, object> vars;
+        private readonly Dictionary<string, object> _vars;
 
         public VariableStore()
         {
-            vars = new Dictionary<string, object>(16);
+            _vars = new Dictionary<string, object>(16);
         }
 
         public Variable<T> Define<T>(string key, T value, bool replace = false)
         {
-            if (vars.TryGetValue(key, out var v))
+            if (_vars.TryGetValue(key, out var v))
             {
                 var result = (Variable<T>)v;
                 if (replace)
@@ -30,13 +30,13 @@ namespace UniCore.Vars
             }
 
             var variable = new Variable<T>(key, value);
-            vars[key] = variable;
+            _vars[key] = variable;
             return variable;
         }
 
         public Variable<T> Define<T>(string key, Variable<T> value, bool replace = false)
         {
-            if (vars.TryGetValue(key, out var v))
+            if (_vars.TryGetValue(key, out var v))
             {
                 if (!replace)
                 {
@@ -45,18 +45,18 @@ namespace UniCore.Vars
                 }
             }
 
-            vars[key] = value;
+            _vars[key] = value;
             return value;
         }
 
         public void Undefine(string key)
         {
-            vars.Remove(key);
+            _vars.Remove(key);
         }
 
         public Variable<T> Get<T>(string key)
         {
-            if (vars.TryGetValue(key, out var v))
+            if (_vars.TryGetValue(key, out var v))
             {
                 return (Variable<T>)v;
             }
@@ -64,6 +64,6 @@ namespace UniCore.Vars
             return null;
         }
         
-        internal IEnumerable<object> All => vars.Values;
+        internal IEnumerable<object> All => _vars.Values;
     }
 }

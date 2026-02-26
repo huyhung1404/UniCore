@@ -8,20 +8,20 @@ namespace UniCore.Editor.QuickAccess
 {
     public class QuickAccessWindow : EditorWindow, IHasCustomMenu
     {
-        private static GUIContent foldoutOff;
-        private static GUIContent foldoutOn;
-        private static GUIStyle headerBox;
-        private static GUIStyle iconStyle;
-        private string search = "";
+        private static GUIContent s_foldoutOff;
+        private static GUIContent s_foldoutOn;
+        private static GUIStyle s_headerBox;
+        private static GUIStyle s_iconStyle;
+        private string _search = "";
 
         [MenuItem("UniCore/Tools/Quick Access")]
         private static void Open() => GetWindow<QuickAccessWindow>("Quick Access");
 
         private static void InitStyle()
         {
-            if (headerBox != null) return;
+            if (s_headerBox != null) return;
 
-            headerBox = new GUIStyle(EditorStyles.helpBox)
+            s_headerBox = new GUIStyle(EditorStyles.helpBox)
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold,
@@ -29,13 +29,13 @@ namespace UniCore.Editor.QuickAccess
                 padding = new RectOffset(6, 6, 4, 4)
             };
 
-            iconStyle = new GUIStyle(EditorStyles.iconButton)
+            s_iconStyle = new GUIStyle(EditorStyles.iconButton)
             {
                 alignment = TextAnchor.MiddleCenter
             };
 
-            foldoutOff = EditorGUIUtility.IconContent("IN Foldout");
-            foldoutOn = EditorGUIUtility.IconContent("IN Foldout on");
+            s_foldoutOff = EditorGUIUtility.IconContent("IN Foldout");
+            s_foldoutOn = EditorGUIUtility.IconContent("IN Foldout on");
         }
 
         public void AddItemsToMenu(GenericMenu menu)
@@ -57,14 +57,14 @@ namespace UniCore.Editor.QuickAccess
             DrawToolbar();
             DrawFavorite();
 
-            foreach (var g in QuickAccessStorage.Database().groups)
+            foreach (var g in QuickAccessStorage.Database().Groups)
                 DrawGroup(g);
         }
 
         private void DrawToolbar()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            search = GUILayout.TextField(search, GUI.skin.FindStyle("ToolbarSearchTextField") ?? GUI.skin.textField);
+            _search = GUILayout.TextField(_search, GUI.skin.FindStyle("ToolbarSearchTextField") ?? GUI.skin.textField);
             EditorGUILayout.EndHorizontal();
         }
 
@@ -73,8 +73,8 @@ namespace UniCore.Editor.QuickAccess
             var favGUIDs = QuickAccessFavorite.GetFavorites();
             if (favGUIDs.Length == 0) return;
             if (!DrawFavoriteHeader()) return;
-            var items = favGUIDs.Select(g => new AssetAddress { guidAsset = g }).ToList();
-            EditorAutoGrid.DrawGrid(items, search, OnClick, static (a) => OnEdit(a, true));
+            var items = favGUIDs.Select(g => new AssetAddress { GuidAsset = g }).ToList();
+            EditorAutoGrid.DrawGrid(items, _search, OnClick, static (a) => OnEdit(a, true));
         }
 
         private static bool DrawFavoriteHeader()
@@ -94,16 +94,16 @@ namespace UniCore.Editor.QuickAccess
 
             EditorGUI.DrawRect(rect, bg);
 
-            GUI.Box(rect, GUIContent.none, headerBox);
+            GUI.Box(rect, GUIContent.none, s_headerBox);
 
 
             var expand = EditorPrefs.GetBool("QuickAccess.Expand", true);
             if (GUI.Button(rect, GUIContent.none, GUIStyle.none))
                 expand = !expand;
 
-            headerBox.alignment = TextAnchor.MiddleLeft;
-            GUI.Label(rect, "⭐ Favorite", headerBox);
-            headerBox.alignment = TextAnchor.MiddleCenter;
+            s_headerBox.alignment = TextAnchor.MiddleLeft;
+            GUI.Label(rect, "⭐ Favorite", s_headerBox);
+            s_headerBox.alignment = TextAnchor.MiddleCenter;
             EditorPrefs.SetBool("QuickAccess.Expand", expand);
             return expand;
         }
@@ -116,14 +116,14 @@ namespace UniCore.Editor.QuickAccess
 
             if (!open) return;
 
-            if (g.assets.Count == 0)
+            if (g.Assets.Count == 0)
             {
                 EditorGUILayout.HelpBox("Drag assets onto this header to add.", MessageType.Info);
                 EditorGUILayout.Space(2);
                 return;
             }
 
-            EditorAutoGrid.DrawGrid(g.assets, search, OnClick, static (a) => OnEdit(a, false));
+            EditorAutoGrid.DrawGrid(g.Assets, _search, OnClick, static (a) => OnEdit(a, false));
         }
 
         private static bool DrawGroupHeader(GroupData group, out Rect rect)
@@ -143,33 +143,33 @@ namespace UniCore.Editor.QuickAccess
 
             EditorGUI.DrawRect(rect, bg);
 
-            GUI.Box(rect, GUIContent.none, headerBox);
+            GUI.Box(rect, GUIContent.none, s_headerBox);
 
             var arrowRect = new Rect(rect.x + 5, rect.y + 5, 20, rect.height);
             var labelRect = rect;
             var gearRect = new Rect(rect.xMax - 20, rect.y + 5, 20, rect.height);
 
-            GUI.Label(labelRect, string.IsNullOrEmpty(group.groupName) ? "Default" : group.groupName, headerBox);
+            GUI.Label(labelRect, string.IsNullOrEmpty(group.GroupName) ? "Default" : group.GroupName, s_headerBox);
 
-            var icon = group.groupExpand ? foldoutOn : foldoutOff;
-            if (GUI.Button(arrowRect, icon, iconStyle))
-                group.groupExpand = !group.groupExpand;
+            var icon = group.GroupExpand ? s_foldoutOn : s_foldoutOff;
+            if (GUI.Button(arrowRect, icon, s_iconStyle))
+                group.GroupExpand = !group.GroupExpand;
 
-            if (GUI.Button(gearRect, EditorGUIUtility.IconContent("_Popup"), iconStyle))
+            if (GUI.Button(gearRect, EditorGUIUtility.IconContent("_Popup"), s_iconStyle))
             {
                 ShowGroupMenu(group);
             }
 
-            return group.groupExpand;
+            return group.GroupExpand;
         }
 
         private static void ShowGroupMenu(GroupData group)
         {
             var menu = new GenericMenu();
-            var index = QuickAccessStorage.Database().groups.IndexOf(group);
+            var index = QuickAccessStorage.Database().Groups.IndexOf(group);
 
             var upEnable = index != -1 && index != 0;
-            var downEnable = index != -1 && index != QuickAccessStorage.Database().groups.Count - 1;
+            var downEnable = index != -1 && index != QuickAccessStorage.Database().Groups.Count - 1;
 
             AddItem(menu, new GUIContent("Move Up"), upEnable, () => MoveGroup(index, index - 1));
             AddItem(menu, new GUIContent("Move Down"), downEnable, () => MoveGroup(index, index + 1));
@@ -191,15 +191,15 @@ namespace UniCore.Editor.QuickAccess
 
         private static void DeleteGroup(GroupData group)
         {
-            var removedGuids = group.assets.Select(a => a.guidAsset).ToList();
-            QuickAccessStorage.Database().groups.Remove(group);
-            QuickAccessStorage.Database().stats.RemoveAll(s => removedGuids.Contains(s.guid));
+            var removedGuids = group.Assets.Select(a => a.GuidAsset).ToList();
+            QuickAccessStorage.Database().Groups.Remove(group);
+            QuickAccessStorage.Database().Stats.RemoveAll(s => removedGuids.Contains(s.GUID));
             QuickAccessStorage.Save(QuickAccessStorage.Database());
         }
 
         private static void MoveGroup(int index, int newIndex)
         {
-            var groups = QuickAccessStorage.Database().groups;
+            var groups = QuickAccessStorage.Database().Groups;
             (groups[index], groups[newIndex]) = (groups[newIndex], groups[index]);
             QuickAccessStorage.Save(QuickAccessStorage.Database());
         }
@@ -226,8 +226,8 @@ namespace UniCore.Editor.QuickAccess
                     var path = AssetDatabase.GetAssetPath(obj);
                     var guid = AssetDatabase.AssetPathToGUID(path);
 
-                    if (group.assets.All(a => a.guidAsset != guid))
-                        group.assets.Add(new AssetAddress { guidAsset = guid });
+                    if (group.Assets.All(a => a.GuidAsset != guid))
+                        group.Assets.Add(new AssetAddress { GuidAsset = guid });
                 }
 
                 QuickAccessStorage.Save(QuickAccessStorage.Database());
@@ -237,7 +237,7 @@ namespace UniCore.Editor.QuickAccess
 
         private static void OnClick(AssetAddress a)
         {
-            var path = AssetDatabase.GUIDToAssetPath(a.guidAsset);
+            var path = AssetDatabase.GUIDToAssetPath(a.GuidAsset);
             var obj = AssetDatabase.LoadAssetAtPath<Object>(path);
             Selection.activeObject = obj;
             EditorGUIUtility.PingObject(obj);
@@ -246,7 +246,7 @@ namespace UniCore.Editor.QuickAccess
             var fullName = obj.GetType().FullName;
             if (fullName != null && fullName.Contains("UnityEditor.DefaultAsset")) AssetDatabase.OpenAsset(obj);
 
-            QuickAccessFavorite.RegisterUse(a.guidAsset);
+            QuickAccessFavorite.RegisterUse(a.GuidAsset);
         }
 
         private static void OnEdit(AssetAddress a, bool isFavorite) => QuickAccessEditPopup.Open(a, isFavorite);

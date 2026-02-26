@@ -4,57 +4,57 @@ namespace UniCore.Notify.DotPing.Internal
 {
     public class JumpGraphic : PingGraphic
     {
-        [SerializeField] private float jumpPower = 15f;
-        [SerializeField] private int jumpCount = 2;
-        [SerializeField] private float jumpDuration = 1f;
-        [SerializeField] private float interval = 2.5f;
+        [SerializeField] private float m_jumpPower = 15f;
+        [SerializeField] private int m_jumpCount = 2;
+        [SerializeField] private float m_jumpDuration = 1f;
+        [SerializeField] private float m_interval = 2.5f;
 
-        private Vector3 startPos;
-        private float timer;
-        private bool jumping;
+        private Vector3 _startPos;
+        private float _timer;
+        private bool _jumping;
 
         private void OnEnable()
         {
-            startPos = transform.localPosition;
+            _startPos = transform.localPosition;
             transform.localScale = Vector3.one;
-            timer = 0f;
-            jumping = true;
+            _timer = 0f;
+            _jumping = true;
         }
 
         private void Update()
         {
-            timer += Time.deltaTime;
+            _timer += Time.deltaTime;
 
-            if (jumping)
+            if (_jumping)
             {
-                var t = timer / jumpDuration;
+                var t = _timer / m_jumpDuration;
 
                 if (t >= 1f)
                 {
-                    jumping = false;
-                    timer = 0f;
-                    transform.localPosition = startPos;
+                    _jumping = false;
+                    _timer = 0f;
+                    transform.localPosition = _startPos;
                     return;
                 }
 
-                var jumpT = (t * jumpCount) % 1f;
-                var height = 4f * jumpPower * jumpT * (1f - jumpT);
+                var jumpT = (t * m_jumpCount) % 1f;
+                var height = 4f * m_jumpPower * jumpT * (1f - jumpT);
 
-                transform.localPosition = startPos + Vector3.up * height;
+                transform.localPosition = _startPos + Vector3.up * height;
             }
             else
             {
-                if (timer >= interval)
+                if (_timer >= m_interval)
                 {
-                    jumping = true;
-                    timer = 0f;
+                    _jumping = true;
+                    _timer = 0f;
                 }
             }
         }
 
         private void OnDisable()
         {
-            transform.localPosition = startPos;
+            transform.localPosition = _startPos;
         }
     }
 }

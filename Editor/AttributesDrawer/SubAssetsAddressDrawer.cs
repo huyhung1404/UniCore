@@ -9,17 +9,17 @@ namespace UniCore.Editor
     [CustomPropertyDrawer(typeof(SubAssetsAddress))]
     public class SubAssetsAddressDrawer : PropertyDrawer
     {
-        private const float HeaderH = 20f;
-        private const float DropH = 50f;
-        private const float ItemH = 18f;
+        private const float k_headerH = 20f;
+        private const float k_dropH = 50f;
+        private const float k_itemH = 18f;
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             var parent = property.serializedObject.targetObject as ScriptableObject;
             if (parent == null) return 40;
             var count = GetSubAssets(parent).Count;
-            var listHeight = count * (ItemH + 2);
-            return HeaderH + Mathf.Max(DropH, listHeight) + 10;
+            var listHeight = count * (k_itemH + 2);
+            return k_headerH + Mathf.Max(k_dropH, listHeight) + 10;
         }
 
         public override void OnGUI(Rect pos, SerializedProperty property, GUIContent label)
@@ -40,22 +40,22 @@ namespace UniCore.Editor
 
             GUI.Box(pos, GUIContent.none, EditorStyles.helpBox);
 
-            var titleRect = new Rect(pos.x + 6, pos.y + 2, pos.width - HeaderH, HeaderH);
+            var titleRect = new Rect(pos.x + 6, pos.y + 2, pos.width - k_headerH, k_headerH);
             EditorGUI.LabelField(titleRect, "Sub Assets", EditorStyles.boldLabel);
 
-            var settingRect = new Rect(pos.xMax - HeaderH, pos.y + 4, HeaderH, HeaderH);
+            var settingRect = new Rect(pos.xMax - k_headerH, pos.y + 4, k_headerH, k_headerH);
             if (GUI.Button(settingRect, EditorGUIUtility.IconContent("_Popup"), EditorStyles.iconButton))
             {
                 ShowGroupMenu(property);
             }
 
             var bodyY = titleRect.yMax + 2;
-            var bodyH = pos.height - HeaderH - 6;
+            var bodyH = pos.height - k_headerH - 6;
             var colW = pos.width / 3f;
 
-            var addRect = new Rect(pos.x + 4, bodyY, colW - 6, DropH);
+            var addRect = new Rect(pos.x + 4, bodyY, colW - 6, k_dropH);
             var listRect = new Rect(addRect.xMax + 4, bodyY, colW - 8, bodyH);
-            var extractRect = new Rect(listRect.xMax + 4, bodyY, colW - 8, DropH);
+            var extractRect = new Rect(listRect.xMax + 4, bodyY, colW - 8, k_dropH);
 
             DrawAdd(addRect, parent);
             DrawList(listRect, parent);
@@ -138,13 +138,13 @@ namespace UniCore.Editor
 
             foreach (var sub in GetSubAssets(parent))
             {
-                var r = new Rect(rect.x + 4, y, rect.width - 8, ItemH);
+                var r = new Rect(rect.x + 4, y, rect.width - 8, k_itemH);
 
                 EditorGUI.ObjectField(r, sub, typeof(Object), false);
 
                 HandleItemDrag(r, sub);
 
-                y += ItemH + 2;
+                y += k_itemH + 2;
             }
         }
 

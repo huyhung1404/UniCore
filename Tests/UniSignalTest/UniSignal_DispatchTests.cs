@@ -23,7 +23,7 @@ namespace UniCore.Tests.Signal
         private class GamePlayListener : ISignalListener<TestSignal>
         {
             public bool Received;
-            public SignalScope ListenScope => UniSignal_ScopeTests.Gameplay;
+            public SignalScope ListenScope => UniSignal_ScopeTests.s_Gameplay;
 
             public void OnSignal(TestSignal signal)
             {
@@ -34,7 +34,7 @@ namespace UniCore.Tests.Signal
         private class UIListener : ISignalListener<TestSignal>
         {
             public bool Received;
-            public SignalScope ListenScope => UniSignal_ScopeTests.UI;
+            public SignalScope ListenScope => UniSignal_ScopeTests.s_UI;
 
             public void OnSignal(TestSignal signal)
             {
@@ -75,7 +75,7 @@ namespace UniCore.Tests.Signal
             SignalSystem.Register(gamePlayListener);
             SignalSystem.Register(uiListener);
 
-            SignalSystem.Dispatch(new TestSignal(), UniSignal_ScopeTests.Gameplay);
+            SignalSystem.Dispatch(new TestSignal(), UniSignal_ScopeTests.s_Gameplay);
 
             Assert.IsTrue(allListener.Received);
             Assert.IsTrue(gamePlayListener.Received);
@@ -141,7 +141,7 @@ namespace UniCore.Tests.Signal
         {
             public bool Received;
             public int Priority => 0;
-            public SignalScope ListenScope => UniSignal_ScopeTests.Gameplay;
+            public SignalScope ListenScope => UniSignal_ScopeTests.s_Gameplay;
 
             public void OnSignal(TestSignalMultiScope signal)
             {
@@ -151,7 +151,7 @@ namespace UniCore.Tests.Signal
 
         private struct TestSignalMultiScope : ISignalEvent
         {
-            public SignalScope Scope => UniSignal_ScopeTests.Gameplay | UniSignal_ScopeTests.UI;
+            public SignalScope Scope => UniSignal_ScopeTests.s_Gameplay | UniSignal_ScopeTests.s_UI;
         }
 
         [Test]
@@ -195,7 +195,7 @@ namespace UniCore.Tests.Signal
         private class ExceptionListener : ISignalListener<TestSignalMultiScope>
         {
             public int Priority => 0;
-            public SignalScope ListenScope => UniSignal_ScopeTests.Gameplay;
+            public SignalScope ListenScope => UniSignal_ScopeTests.s_Gameplay;
 
             public void OnSignal(TestSignalMultiScope signal)
             {

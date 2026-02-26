@@ -18,38 +18,38 @@ namespace UniCore.Attribute
     [Serializable]
     public class InterfaceReference<TInterface, UObject> where UObject : Object where TInterface : class
     {
-        [SerializeField] [HideInInspector] private UObject underlyingValue;
+        [SerializeField] [HideInInspector] private UObject _underlyingValue;
 
         public TInterface Value
         {
             get
             {
-                if (underlyingValue == null) return null;
-                var @interface = underlyingValue as TInterface;
-                Debug.Assert(@interface != null, $"{underlyingValue} needs to implement interface {nameof(TInterface)}.");
+                if (_underlyingValue == null) return null;
+                var @interface = _underlyingValue as TInterface;
+                Debug.Assert(@interface != null, $"{_underlyingValue} needs to implement interface {nameof(TInterface)}.");
                 return @interface;
             }
             set
             {
                 if (value == null)
-                    underlyingValue = null;
+                    _underlyingValue = null;
                 else
                 {
                     var newValue = value as UObject;
                     Debug.Assert(newValue != null, $"{value} needs to be of type {typeof(UObject)}.");
-                    underlyingValue = newValue;
+                    _underlyingValue = newValue;
                 }
             }
         }
 
-        public UObject UnderlyingValue { get => underlyingValue; set => underlyingValue = value; }
+        public UObject UnderlyingValue { get => _underlyingValue; set => _underlyingValue = value; }
 
         public InterfaceReference()
         {
         }
 
-        public InterfaceReference(UObject target) => underlyingValue = target;
-        public InterfaceReference(TInterface @interface) => underlyingValue = @interface as UObject;
+        public InterfaceReference(UObject target) => _underlyingValue = target;
+        public InterfaceReference(TInterface @interface) => _underlyingValue = @interface as UObject;
 
         public static implicit operator TInterface(InterfaceReference<TInterface, UObject> obj) => obj.Value;
     }

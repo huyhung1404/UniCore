@@ -10,17 +10,17 @@ namespace UniCore.Editor
 {
     public class SignalAndVarsDebugWindow : EditorWindow
     {
-        private Vector2 scroll;
-        private Vector2 historyScroll;
-        private double lastRepaint;
-        private string sceneFilter = string.Empty;
-        private string scopeFilter = string.Empty;
-        private string signalFilter = string.Empty;
-        private string listenerFilter = string.Empty;
-        private bool autoRefresh;
-        private bool drawHistory;
-        private bool drawVariable;
-        private readonly Dictionary<Type, bool> foldouts = new Dictionary<Type, bool>(64);
+        private Vector2 _scroll;
+        private Vector2 _historyScroll;
+        private double _lastRepaint;
+        private string _sceneFilter = string.Empty;
+        private string _scopeFilter = string.Empty;
+        private string _signalFilter = string.Empty;
+        private string _listenerFilter = string.Empty;
+        private bool _autoRefresh;
+        private bool _drawHistory;
+        private bool _drawVariable;
+        private readonly Dictionary<Type, bool> _foldouts = new Dictionary<Type, bool>(64);
 
         [MenuItem("UniCore/Windows/Signal And Vars", priority = 0)]
         public static void Open()
@@ -30,25 +30,25 @@ namespace UniCore.Editor
 
         private void OnEnable()
         {
-            autoRefresh = EditorPrefs.GetBool("UniSignal.AutoRefresh", true);
-            drawHistory = EditorPrefs.GetBool("UniSignal.DrawHistory", false);
-            drawVariable = EditorPrefs.GetBool("UniSignal.DrawVariable", false);
+            _autoRefresh = EditorPrefs.GetBool("UniSignal.AutoRefresh", true);
+            _drawHistory = EditorPrefs.GetBool("UniSignal.DrawHistory", false);
+            _drawVariable = EditorPrefs.GetBool("UniSignal.DrawVariable", false);
             EditorApplication.update += UpdateLoop;
         }
 
         private void OnDisable()
         {
-            EditorPrefs.SetBool("UniSignal.AutoRefresh", autoRefresh);
-            EditorPrefs.SetBool("UniSignal.DrawHistory", drawHistory);
-            EditorPrefs.SetBool("UniSignal.DrawVariable", drawVariable);
+            EditorPrefs.SetBool("UniSignal.AutoRefresh", _autoRefresh);
+            EditorPrefs.SetBool("UniSignal.DrawHistory", _drawHistory);
+            EditorPrefs.SetBool("UniSignal.DrawVariable", _drawVariable);
             EditorApplication.update -= UpdateLoop;
         }
 
         private void UpdateLoop()
         {
-            if (!autoRefresh) return;
-            if (!(EditorApplication.timeSinceStartup - lastRepaint > 0.2f)) return;
-            lastRepaint = EditorApplication.timeSinceStartup;
+            if (!_autoRefresh) return;
+            if (!(EditorApplication.timeSinceStartup - _lastRepaint > 0.2f)) return;
+            _lastRepaint = EditorApplication.timeSinceStartup;
             Repaint();
         }
 
@@ -56,8 +56,8 @@ namespace UniCore.Editor
         {
             DrawToolbar();
 
-            scroll = EditorGUILayout.BeginScrollView(scroll);
-            foreach (var kvp in SignalSystem.listeners)
+            _scroll = EditorGUILayout.BeginScrollView(_scroll);
+            foreach (var kvp in SignalSystem.s_Listeners)
             {
                 if (!PassSignalFilter(kvp.Key)) continue;
                 DrawSignalType(kvp.Key, kvp.Value);
@@ -65,13 +65,13 @@ namespace UniCore.Editor
 
             EditorGUILayout.EndScrollView();
 
-            if (drawVariable) DrawVariable();
-            if (drawHistory) DrawDispatchHistory();
+            if (_drawVariable) DrawVariable();
+            if (_drawHistory) DrawDispatchHistory();
         }
 
         private bool PassSignalFilter(Type signalType)
         {
-            return string.IsNullOrEmpty(signalFilter) || signalType.Name.Contains(signalFilter, StringComparison.OrdinalIgnoreCase);
+            return string.IsNullOrEmpty(_signalFilter) || signalType.Name.Contains(_signalFilter, StringComparison.OrdinalIgnoreCase);
         }
 
         #region UI Sections
@@ -80,9 +80,9 @@ namespace UniCore.Editor
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                autoRefresh = GUILayout.Toggle(autoRefresh, "Auto Refresh", EditorStyles.toolbarButton);
-                drawVariable = GUILayout.Toggle(drawVariable, "Variable", EditorStyles.toolbarButton);
-                drawHistory = GUILayout.Toggle(drawHistory, "History", EditorStyles.toolbarButton);
+                _autoRefresh = GUILayout.Toggle(_autoRefresh, "Auto Refresh", EditorStyles.toolbarButton);
+                _drawVariable = GUILayout.Toggle(_drawVariable, "Variable", EditorStyles.toolbarButton);
+                _drawHistory = GUILayout.Toggle(_drawHistory, "History", EditorStyles.toolbarButton);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Release Empty Lists", EditorStyles.toolbarButton)) SignalSystem.ReleaseEmptyLists();
                 if (GUILayout.Button("Clear All", EditorStyles.toolbarButton)) SignalSystem.Clear();
@@ -91,28 +91,28 @@ namespace UniCore.Editor
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
                 EditorGUILayout.LabelField("Signal", EditorStyles.miniBoldLabel, GUILayout.MaxWidth(36));
-                signalFilter = GUILayout.TextField(signalFilter, EditorStyles.toolbarSearchField);
+                _signalFilter = GUILayout.TextField(_signalFilter, EditorStyles.toolbarSearchField);
 
                 EditorGUILayout.LabelField("Listener", EditorStyles.miniBoldLabel, GUILayout.MaxWidth(45));
-                listenerFilter = GUILayout.TextField(listenerFilter, EditorStyles.toolbarSearchField);
+                _listenerFilter = GUILayout.TextField(_listenerFilter, EditorStyles.toolbarSearchField);
 
                 EditorGUILayout.LabelField("Scene", EditorStyles.miniBoldLabel, GUILayout.MaxWidth(36));
-                sceneFilter = GUILayout.TextField(sceneFilter, EditorStyles.toolbarSearchField);
+                _sceneFilter = GUILayout.TextField(_sceneFilter, EditorStyles.toolbarSearchField);
 
                 EditorGUILayout.LabelField("Scope", EditorStyles.miniBoldLabel, GUILayout.MaxWidth(36));
-                scopeFilter = GUILayout.TextField(scopeFilter, EditorStyles.toolbarSearchField);
+                _scopeFilter = GUILayout.TextField(_scopeFilter, EditorStyles.toolbarSearchField);
             }
         }
 
         private void DrawSignalType(Type signalType, IListenerList list)
         {
-            foldouts.TryAdd(signalType, true);
+            _foldouts.TryAdd(signalType, true);
 
             EditorGUILayout.BeginVertical("box");
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                foldouts[signalType] = EditorGUILayout.Foldout(foldouts[signalType], $"{signalType.Name} ({list.Count})", true);
+                _foldouts[signalType] = EditorGUILayout.Foldout(_foldouts[signalType], $"{signalType.Name} ({list.Count})", true);
 
                 if (GUILayout.Button("Send", GUILayout.Width(60)))
                 {
@@ -120,7 +120,7 @@ namespace UniCore.Editor
                 }
             }
 
-            if (foldouts[signalType])
+            if (_foldouts[signalType])
             {
                 EditorGUI.indentLevel++;
                 for (var i = 0; i < list.Count; i++)
@@ -137,19 +137,19 @@ namespace UniCore.Editor
 
         private bool PassFilter(object listener)
         {
-            if (!string.IsNullOrEmpty(listenerFilter))
+            if (!string.IsNullOrEmpty(_listenerFilter))
             {
                 if (!listener.GetType().Name
-                        .Contains(listenerFilter, StringComparison.OrdinalIgnoreCase))
+                        .Contains(_listenerFilter, StringComparison.OrdinalIgnoreCase))
                     return false;
             }
 
-            if (!string.IsNullOrEmpty(sceneFilter))
+            if (!string.IsNullOrEmpty(_sceneFilter))
             {
                 if (listener is MonoBehaviour mb)
                 {
                     var sceneName = mb.gameObject.scene.name;
-                    if (!sceneName.Contains(sceneFilter, StringComparison.OrdinalIgnoreCase)) return false;
+                    if (!sceneName.Contains(_sceneFilter, StringComparison.OrdinalIgnoreCase)) return false;
                 }
                 else
                 {
@@ -157,14 +157,14 @@ namespace UniCore.Editor
                 }
             }
 
-            if (string.IsNullOrEmpty(scopeFilter)) return true;
+            if (string.IsNullOrEmpty(_scopeFilter)) return true;
             foreach (var itf in listener.GetType().GetInterfaces())
             {
                 if (!itf.IsGenericType || itf.GetGenericTypeDefinition() != typeof(ISignalListener<>)) continue;
                 var scope = itf.GetProperty("ListenScope")?.GetValue(listener);
                 if (scope == null) return false;
                 var value = SignalScopeRegistry.GetReadableScope((SignalScope)scope);
-                if (!value.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase))
+                if (!value.Contains(_scopeFilter, StringComparison.OrdinalIgnoreCase))
                     return false;
             }
 
@@ -263,7 +263,7 @@ namespace UniCore.Editor
             EditorGUILayout.LabelField(GUIContent.none, GUI.skin.horizontalSlider);
             EditorGUILayout.LabelField("Dispatch History", EditorStyles.boldLabel);
 
-            historyScroll = EditorGUILayout.BeginScrollView(historyScroll, GUILayout.Height(120));
+            _historyScroll = EditorGUILayout.BeginScrollView(_historyScroll, GUILayout.Height(120));
             foreach (var record in SignalDispatchHistory.Records) EditorGUILayout.LabelField(record);
             EditorGUILayout.EndScrollView();
             if (GUILayout.Button("Clear History")) SignalDispatchHistory.Clear();

@@ -2,10 +2,10 @@
 {
     internal struct PingLocationNode
     {
-        public string id;
-        public string parentId;
-        public int value;
-        public bool hasChild;
-        public bool isActive => value > 0 || hasChild;
+        public string Id;
+        public string ParentId;
+        public int Value;
+        public bool HasChild;
+        public bool IsActive => Value > 0 || HasChild;
     }
 }

@@ -15,33 +15,33 @@ namespace UniCore.Storage
 
     public sealed class StorageSettings : ScriptableObject, ISettings
     {
-        [SerializeField] private int version;
+        [SerializeField] private int m_version;
 
-        [SerializeField] private SerializationType serializationType = SerializationType.Json;
-        [SerializeField] private InterfaceReference<ISerializer> serializerCustom;
+        [SerializeField] private SerializationType m_serializationType = SerializationType.Json;
+        [SerializeField] private InterfaceReference<ISerializer> m_serializerCustom;
 
-        [SerializeField] private KeyType keyType = KeyType.Static;
-        [SerializeField] private InterfaceReference<IKey> keyCustom;
+        [SerializeField] private KeyType m_keyType = KeyType.Static;
+        [SerializeField] private InterfaceReference<IKey> m_keyCustom;
 
-        [SerializeField] private EncryptionType encryptionType = EncryptionType.None;
-        [SerializeField] private InterfaceReference<IEncryptor> encryptorCustom;
+        [SerializeField] private EncryptionType m_encryptionType = EncryptionType.None;
+        [SerializeField] private InterfaceReference<IEncryptor> m_encryptorCustom;
 
-        [SerializeField] private ProtectorType protectorType = ProtectorType.None;
-        [SerializeField] private InterfaceReference<IProtector> protectorCustom;
+        [SerializeField] private ProtectorType m_protectorType = ProtectorType.None;
+        [SerializeField] private InterfaceReference<IProtector> m_protectorCustom;
 
-        [SerializeField] private StorageType storageType = StorageType.LocalStorage;
-        [SerializeField] private InterfaceReference<IStorageProvider> storageCustom;
+        [SerializeField] private StorageType m_storageType = StorageType.LocalStorage;
+        [SerializeField] private InterfaceReference<IStorageProvider> m_storageCustom;
 
-        public int Version => version;
+        public int Version => m_version;
 
         public ISerializer Serializer
         {
             get
             {
-                return serializationType switch
+                return m_serializationType switch
                 {
                     SerializationType.Binary => new BinarySerializer(),
-                    SerializationType.Custom => serializerCustom.Value,
+                    SerializationType.Custom => m_serializerCustom.Value,
                     _ => new JsonSerializer()
                 };
             }
@@ -51,10 +51,10 @@ namespace UniCore.Storage
         {
             get
             {
-                return keyType switch
+                return m_keyType switch
                 {
                     KeyType.DeviceBoundKey => new DeviceBoundKey(),
-                    KeyType.Custom => keyCustom.Value,
+                    KeyType.Custom => m_keyCustom.Value,
                     _ => new StaticKey()
                 };
             }
@@ -64,10 +64,10 @@ namespace UniCore.Storage
         {
             get
             {
-                return encryptionType switch
+                return m_encryptionType switch
                 {
                     EncryptionType.AES => new AESEncryptor(),
-                    EncryptionType.Custom => encryptorCustom.Value,
+                    EncryptionType.Custom => m_encryptorCustom.Value,
                     _ => new NoEncryptor()
                 };
             }
@@ -77,10 +77,10 @@ namespace UniCore.Storage
         {
             get
             {
-                return protectorType switch
+                return m_protectorType switch
                 {
                     ProtectorType.SHA256 => new SHA256Protector(),
-                    ProtectorType.Custom => protectorCustom.Value,
+                    ProtectorType.Custom => m_protectorCustom.Value,
                     _ => new NoProtector()
                 };
             }
@@ -90,10 +90,10 @@ namespace UniCore.Storage
         {
             get
             {
-                return storageType switch
+                return m_storageType switch
                 {
                     StorageType.PlayerPrefs => new PlayerPrefsStorage(),
-                    StorageType.Custom => storageCustom.Value,
+                    StorageType.Custom => m_storageCustom.Value,
                     _ => new LocalStorage()
                 };
             }

@@ -14,16 +14,16 @@ namespace UniCore.Audio
         ISignalListener<ChangeSFXVolumeSignal>,
         ISignalListener<PlaySoundSignal>
     {
-        [Header("Audio control")] [Range(0f, 1f), SerializeField] private float masterVolume = 1f;
-        [Range(0f, 1f), SerializeField] private float musicVolume = 1f;
-        [Range(0f, 1f), SerializeField] private float sfxVolume = 1f;
-        internal static AudioSystem instance;
-        internal AudioSettings settings;
+        [Header("Audio control")] [Range(0f, 1f), SerializeField] private float m_masterVolume = 1f;
+        [Range(0f, 1f), SerializeField] private float m_musicVolume = 1f;
+        [Range(0f, 1f), SerializeField] private float m_sfxVolume = 1f;
+        internal static AudioSystem s_Instance;
+        internal AudioSettings Settings;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Create()
         {
-            if (instance != null) return;
+            if (s_Instance != null) return;
             var go = new GameObject("AudioSystem");
             go.AddComponent<AudioSystem>();
             go.AddComponent<AudioListener>();
@@ -32,25 +32,25 @@ namespace UniCore.Audio
 
         private void Awake()
         {
-            instance = this;
-            settings = Resources.Load<AudioSettings>(nameof(AudioSettings));
-            SoundEmitterPool.Prewarm(settings.PoolInitialSize);
+            s_Instance = this;
+            Settings = Resources.Load<AudioSettings>(nameof(AudioSettings));
+            SoundEmitterPool.Prewarm(Settings.PoolInitialSize);
 
-            masterVolume = PlayerPrefs.GetFloat("MasterVolume", 1);
-            musicVolume = PlayerPrefs.GetFloat("MusicVolume", 1);
-            sfxVolume = PlayerPrefs.GetFloat("SFXVolume", 1);
+            m_masterVolume = PlayerPrefs.GetFloat("MasterVolume", 1);
+            m_musicVolume = PlayerPrefs.GetFloat("MusicVolume", 1);
+            m_sfxVolume = PlayerPrefs.GetFloat("SFXVolume", 1);
 
-            SetGroupVolume("MasterVolume", masterVolume);
-            SetGroupVolume("MusicVolume", musicVolume);
-            SetGroupVolume("SFXVolume", sfxVolume);
+            SetGroupVolume("MasterVolume", m_masterVolume);
+            SetGroupVolume("MusicVolume", m_musicVolume);
+            SetGroupVolume("SFXVolume", m_sfxVolume);
         }
 
         private void OnValidate()
         {
             if (!Application.isPlaying) return;
-            SetGroupVolume("MasterVolume", masterVolume);
-            SetGroupVolume("MusicVolume", musicVolume);
-            SetGroupVolume("SFXVolume", sfxVolume);
+            SetGroupVolume("MasterVolume", m_masterVolume);
+            SetGroupVolume("MusicVolume", m_musicVolume);
+            SetGroupVolume("SFXVolume", m_sfxVolume);
         }
 
         private void OnEnable()
@@ -75,25 +75,25 @@ namespace UniCore.Audio
 
         public void OnSignal(ChangeMasterVolumeSignal signal)
         {
-            masterVolume = signal.volume;
-            SetGroupVolume("MasterVolume", masterVolume);
+            m_masterVolume = signal.Volume;
+            SetGroupVolume("MasterVolume", m_masterVolume);
         }
 
         public void OnSignal(ChangeMusicVolumeSignal signal)
         {
-            musicVolume = signal.volume;
-            SetGroupVolume("MusicVolume", musicVolume);
+            m_musicVolume = signal.Volume;
+            SetGroupVolume("MusicVolume", m_musicVolume);
         }
 
         public void OnSignal(ChangeSFXVolumeSignal signal)
         {
-            sfxVolume = signal.volume;
-            SetGroupVolume("SFXVolume", sfxVolume);
+            m_sfxVolume = signal.Volume;
+            SetGroupVolume("SFXVolume", m_sfxVolume);
         }
 
         private void SetGroupVolume(string parameterName, float normalizedVolume)
         {
-            var volumeSet = settings.OutputMixer.SetFloat(parameterName, NormalizedToMixerValue(normalizedVolume));
+            var volumeSet = Settings.OutputMixer.SetFloat(parameterName, NormalizedToMixerValue(normalizedVolume));
             if (!volumeSet) Debug.LogError("The AudioMixer parameter was not found");
         }
 
@@ -111,8 +111,8 @@ namespace UniCore.Audio
 
         private static async UniTaskVoid PlaySound(PlaySoundSignal signal)
         {
-            var (config, clipData) = await UniTask.WhenAll(GetConfiguration(signal.config), GetClipData(signal.clip));
-            foreach (var clip in clipData.clips)
+            var (config, clipData) = await UniTask.WhenAll(GetConfiguration(signal.Config), GetClipData(signal.Clip));
+            foreach (var clip in clipData.Clips)
             {
                 var soundEmitter = SoundEmitterPool.Pop();
                 soundEmitter.PlayAudioClip(signal, clip, config);
@@ -123,7 +123,7 @@ namespace UniCore.Audio
 
         public static async UniTask<AudioConfiguration> GetConfiguration(string config)
         {
-            var handle = Addressables.LoadAssetAsync<AudioConfiguration>($"{instance.settings.GroupAddress}/Configs/{config}.asset");
+            var handle = Addressables.LoadAssetAsync<AudioConfiguration>($"{s_Instance.Settings.GroupAddress}/Configs/{config}.asset");
             if (handle.IsDone && handle.IsValid()) return handle.Result;
             return await handle.ToUniTask();
         }
@@ -136,7 +136,7 @@ namespace UniCore.Audio
 
         public static async UniTask<BaseAudioNode> GetClipNode(string clip)
         {
-            var handle = Addressables.LoadAssetAsync<BaseAudioNode>($"{instance.settings.GroupAddress}/Nodes/{clip}.asset");
+            var handle = Addressables.LoadAssetAsync<BaseAudioNode>($"{s_Instance.Settings.GroupAddress}/Nodes/{clip}.asset");
             if (handle.IsDone && handle.IsValid()) return handle.Result;
             return await handle.ToUniTask();
         }

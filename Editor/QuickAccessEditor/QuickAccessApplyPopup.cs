@@ -7,7 +7,7 @@ namespace UniCore.Editor.QuickAccess
 {
     public class QuickAccessApplyPopup : EditorWindow
     {
-        private string json;
+        private string _json;
 
         public static void Open(Rect parentWindowRect)
         {
@@ -26,7 +26,7 @@ namespace UniCore.Editor.QuickAccess
         {
             PopupGUI.BeginPopup();
 
-            json = EditorGUILayout.TextArea(json, GUILayout.Height(80));
+            _json = EditorGUILayout.TextArea(_json, GUILayout.Height(80));
             
             GUILayout.FlexibleSpace();
 
@@ -34,8 +34,8 @@ namespace UniCore.Editor.QuickAccess
             {
                 try
                 {
-                    if (string.IsNullOrEmpty(json)) throw new Exception("Json is empty");
-                    var db = JsonConvert.DeserializeObject<QuickAccessDB>(json);
+                    if (string.IsNullOrEmpty(_json)) throw new Exception("Json is empty");
+                    var db = JsonConvert.DeserializeObject<QuickAccessDB>(_json);
                     QuickAccessStorage.Save(db);
                 }
                 catch (Exception e)

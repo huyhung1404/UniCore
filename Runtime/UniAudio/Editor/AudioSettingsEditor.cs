@@ -12,25 +12,25 @@ namespace UniCore.Editor.Audio
     [CustomEditor(typeof(AudioSettings))]
     public class AudioSettingsEditor : UnityEditor.Editor
     {
-        private SerializedProperty addressTypeProperty;
-        private SerializedProperty staticAddressProperty;
-        private SerializedProperty customAddressProperty;
-        private SerializedProperty soundEmitterPrefabProperty;
-        private SerializedProperty poolInitialSizeProperty;
-        private SerializedProperty outputMixerProperty;
-        private string validationError;
-        private string rootFolderPath;
-        private string nodesFolderPath;
-        private string configsFolderPath;
+        private SerializedProperty _addressTypeProperty;
+        private SerializedProperty _staticAddressProperty;
+        private SerializedProperty _customAddressProperty;
+        private SerializedProperty _soundEmitterPrefabProperty;
+        private SerializedProperty _poolInitialSizeProperty;
+        private SerializedProperty _outputMixerProperty;
+        private string _validationError;
+        private string _rootFolderPath;
+        private string _nodesFolderPath;
+        private string _configsFolderPath;
 
         private void OnEnable()
         {
-            addressTypeProperty = serializedObject.FindProperty("addressType");
-            staticAddressProperty = serializedObject.FindProperty("staticAddress");
-            customAddressProperty = serializedObject.FindProperty("customAddress");
-            soundEmitterPrefabProperty = serializedObject.FindProperty("soundEmitterPrefab");
-            poolInitialSizeProperty = serializedObject.FindProperty("poolInitialSize");
-            outputMixerProperty = serializedObject.FindProperty("outputMixer");
+            _addressTypeProperty = serializedObject.FindProperty("m_addressType");
+            _staticAddressProperty = serializedObject.FindProperty("m_staticAddress");
+            _customAddressProperty = serializedObject.FindProperty("m_customAddress");
+            _soundEmitterPrefabProperty = serializedObject.FindProperty("m_soundEmitterPrefab");
+            _poolInitialSizeProperty = serializedObject.FindProperty("m_poolInitialSize");
+            _outputMixerProperty = serializedObject.FindProperty("m_outputMixer");
         }
 
         [MenuItem("UniCore/Settings/Audio", priority = 1)]
@@ -66,16 +66,16 @@ namespace UniCore.Editor.Audio
             ValidateAddress();
             DrawFolderStructureGUI();
 
-            if (string.IsNullOrEmpty(validationError))
+            if (string.IsNullOrEmpty(_validationError))
             {
                 if (!GUILayout.Button("Ping")) return;
-                var obj = AssetDatabase.LoadAssetAtPath<Object>(rootFolderPath);
+                var obj = AssetDatabase.LoadAssetAtPath<Object>(_rootFolderPath);
                 EditorGUIUtility.PingObject(obj);
                 Selection.activeObject = obj;
                 return;
             }
 
-            EditorGUILayout.HelpBox(validationError, MessageType.Error);
+            EditorGUILayout.HelpBox(_validationError, MessageType.Error);
 
             if (!GUILayout.Button("Fix")) return;
             var settings = (AudioSettings)target;
@@ -88,9 +88,9 @@ namespace UniCore.Editor.Audio
         {
             EditorGUILayout.LabelField("Configs", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(outputMixerProperty);
-            EditorGUILayout.PropertyField(soundEmitterPrefabProperty);
-            EditorGUILayout.PropertyField(poolInitialSizeProperty);
+            EditorGUILayout.PropertyField(_outputMixerProperty);
+            EditorGUILayout.PropertyField(_soundEmitterPrefabProperty);
+            EditorGUILayout.PropertyField(_poolInitialSizeProperty);
             EditorGUI.indentLevel--;
         }
 
@@ -98,14 +98,14 @@ namespace UniCore.Editor.Audio
         {
             EditorGUILayout.LabelField("Group Address", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(addressTypeProperty, GUIContent.none);
-            if (addressTypeProperty != null && addressTypeProperty.enumValueIndex == (int)AddressGroupType.Custom)
+            EditorGUILayout.PropertyField(_addressTypeProperty, GUIContent.none);
+            if (_addressTypeProperty != null && _addressTypeProperty.enumValueIndex == (int)AddressGroupType.Custom)
             {
-                EditorGUILayout.PropertyField(customAddressProperty, GUIContent.none);
+                EditorGUILayout.PropertyField(_customAddressProperty, GUIContent.none);
             }
             else
             {
-                EditorGUILayout.PropertyField(staticAddressProperty, GUIContent.none);
+                EditorGUILayout.PropertyField(_staticAddressProperty, GUIContent.none);
             }
 
             EditorGUI.indentLevel--;
@@ -115,40 +115,40 @@ namespace UniCore.Editor.Audio
 
         private void ValidateAddress()
         {
-            validationError = null;
-            rootFolderPath = null;
-            nodesFolderPath = null;
-            configsFolderPath = null;
+            _validationError = null;
+            _rootFolderPath = null;
+            _nodesFolderPath = null;
+            _configsFolderPath = null;
 
             var settings = (AudioSettings)target;
             var address = settings.GroupAddress;
 
             if (string.IsNullOrEmpty(address))
             {
-                validationError = "GroupAddress is empty.";
+                _validationError = "GroupAddress is empty.";
                 return;
             }
 
-            rootFolderPath = address;
+            _rootFolderPath = address;
 
-            if (!AssetDatabase.IsValidFolder(rootFolderPath))
+            if (!AssetDatabase.IsValidFolder(_rootFolderPath))
             {
-                validationError = $"Folder not found at path: {rootFolderPath}";
+                _validationError = $"Folder not found at path: {_rootFolderPath}";
                 return;
             }
 
-            nodesFolderPath = $"{rootFolderPath}/Nodes";
-            configsFolderPath = $"{rootFolderPath}/Configs";
+            _nodesFolderPath = $"{_rootFolderPath}/Nodes";
+            _configsFolderPath = $"{_rootFolderPath}/Configs";
 
             var missing = "";
-            if (!AssetDatabase.IsValidFolder(nodesFolderPath))
+            if (!AssetDatabase.IsValidFolder(_nodesFolderPath))
                 missing += "Nodes folder missing. ";
 
-            if (!AssetDatabase.IsValidFolder(configsFolderPath))
+            if (!AssetDatabase.IsValidFolder(_configsFolderPath))
                 missing += "Configs folder missing.";
 
             if (!string.IsNullOrEmpty(missing))
-                validationError = missing;
+                _validationError = missing;
         }
 
         private void FixStructure(string address)
@@ -156,25 +156,25 @@ namespace UniCore.Editor.Audio
             var aaSettings = AddressableAssetSettingsDefaultObject.Settings;
             if (aaSettings == null) return;
 
-            rootFolderPath = address;
+            _rootFolderPath = address;
 
-            if (!AssetDatabase.IsValidFolder(rootFolderPath))
+            if (!AssetDatabase.IsValidFolder(_rootFolderPath))
             {
-                var parent = System.IO.Path.GetDirectoryName(rootFolderPath);
-                var folderName = System.IO.Path.GetFileName(rootFolderPath);
+                var parent = System.IO.Path.GetDirectoryName(_rootFolderPath);
+                var folderName = System.IO.Path.GetFileName(_rootFolderPath);
                 AssetDatabase.CreateFolder(parent, folderName);
             }
 
-            nodesFolderPath = $"{rootFolderPath}/Nodes";
-            configsFolderPath = $"{rootFolderPath}/Configs";
+            _nodesFolderPath = $"{_rootFolderPath}/Nodes";
+            _configsFolderPath = $"{_rootFolderPath}/Configs";
 
-            if (!AssetDatabase.IsValidFolder(nodesFolderPath))
-                AssetDatabase.CreateFolder(rootFolderPath, "Nodes");
+            if (!AssetDatabase.IsValidFolder(_nodesFolderPath))
+                AssetDatabase.CreateFolder(_rootFolderPath, "Nodes");
 
-            if (!AssetDatabase.IsValidFolder(configsFolderPath))
-                AssetDatabase.CreateFolder(rootFolderPath, "Configs");
+            if (!AssetDatabase.IsValidFolder(_configsFolderPath))
+                AssetDatabase.CreateFolder(_rootFolderPath, "Configs");
 
-            var guid = AssetDatabase.AssetPathToGUID(rootFolderPath);
+            var guid = AssetDatabase.AssetPathToGUID(_rootFolderPath);
             var entry = aaSettings.FindAssetEntry(guid);
 
             if (entry == null)
@@ -214,9 +214,9 @@ namespace UniCore.Editor.Audio
             EditorGUILayout.LabelField("Required Folder Structure", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
 
-            if (string.IsNullOrEmpty(rootFolderPath) || !AssetDatabase.IsValidFolder(rootFolderPath))
+            if (string.IsNullOrEmpty(_rootFolderPath) || !AssetDatabase.IsValidFolder(_rootFolderPath))
             {
-                DrawDefault(rootFolderPath);
+                DrawDefault(_rootFolderPath);
 
                 EditorGUI.indentLevel++;
                 DrawDefault("Nodes");
@@ -226,11 +226,11 @@ namespace UniCore.Editor.Audio
                 return;
             }
 
-            DrawFolderLine(rootFolderPath, true);
+            DrawFolderLine(_rootFolderPath, true);
 
             EditorGUI.indentLevel++;
-            DrawFolderLine(System.IO.Path.GetFileName(nodesFolderPath), AssetDatabase.IsValidFolder(nodesFolderPath));
-            DrawFolderLine(System.IO.Path.GetFileName(configsFolderPath), AssetDatabase.IsValidFolder(configsFolderPath));
+            DrawFolderLine(System.IO.Path.GetFileName(_nodesFolderPath), AssetDatabase.IsValidFolder(_nodesFolderPath));
+            DrawFolderLine(System.IO.Path.GetFileName(_configsFolderPath), AssetDatabase.IsValidFolder(_configsFolderPath));
             EditorGUI.indentLevel -= 2;
         }
 

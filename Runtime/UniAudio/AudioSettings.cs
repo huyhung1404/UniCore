@@ -7,17 +7,17 @@ namespace UniCore.Audio
 {
     public sealed class AudioSettings : ScriptableObject
     {
-        [SerializeField] private AddressGroupType addressType = AddressGroupType.Static;
-        [SerializeField] private string staticAddress = "Assets/AudioSystem";
-        [SerializeField] private InterfaceReference<IAddressGroup> customAddress;
-        [SerializeField] private AudioMixer outputMixer;
-        [SerializeField] private SoundEmitter soundEmitterPrefab;
-        [SerializeField] private int poolInitialSize = 16;
+        [SerializeField] private AddressGroupType m_addressType = AddressGroupType.Static;
+        [SerializeField] private string m_staticAddress = "Assets/AudioSystem";
+        [SerializeField] private InterfaceReference<IAddressGroup> m_customAddress;
+        [SerializeField] private AudioMixer m_outputMixer;
+        [SerializeField] private SoundEmitter m_soundEmitterPrefab;
+        [SerializeField] private int m_poolInitialSize = 16;
 
-        public string GroupAddress => addressType == AddressGroupType.Static ? staticAddress : customAddress.Value.GetAddress();
-        public SoundEmitter SoundEmitterPrefab => soundEmitterPrefab;
-        public int PoolInitialSize => poolInitialSize;
-        public AudioMixer OutputMixer => outputMixer;
+        public string GroupAddress => m_addressType == AddressGroupType.Static ? m_staticAddress : m_customAddress.Value.GetAddress();
+        public SoundEmitter SoundEmitterPrefab => m_soundEmitterPrefab;
+        public int PoolInitialSize => m_poolInitialSize;
+        public AudioMixer OutputMixer => m_outputMixer;
     }
 }
 #endif

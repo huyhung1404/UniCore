@@ -4,39 +4,39 @@
 
     public static class StorageSystem
     {
-        internal static VersionChanged onVersionChanged;
-        private static StoragePipeline pipeline;
+        internal static VersionChanged s_OnVersionChanged;
+        private static StoragePipeline s_pipeline;
 
-        public static event VersionChanged OnVersionChanged { add => onVersionChanged += value; remove => onVersionChanged -= value; }
+        public static event VersionChanged OnVersionChanged { add => s_OnVersionChanged += value; remove => s_OnVersionChanged -= value; }
 
         public static void SetSettings(ISettings settings)
         {
-            pipeline = new StoragePipeline(settings);
+            s_pipeline = new StoragePipeline(settings);
         }
 
         public static byte[] GetKey()
         {
             InitializationIfNeed();
-            return pipeline.Key;
+            return s_pipeline.Key;
         }
 
         public static void Save<T>(string fileName, T data)
         {
             InitializationIfNeed();
-            pipeline.Save(fileName, data);
+            s_pipeline.Save(fileName, data);
         }
 
         public static T Load<T>(string fileName)
         {
             InitializationIfNeed();
-            return pipeline.Load<T>(fileName);
+            return s_pipeline.Load<T>(fileName);
         }
 
         private static void InitializationIfNeed()
         {
-            if (pipeline != null) return;
+            if (s_pipeline != null) return;
             ISettings setting = UnityEngine.Resources.Load<StorageSettings>($"{nameof(StorageSettings)}.asset");
-            pipeline = new StoragePipeline(setting);
+            s_pipeline = new StoragePipeline(setting);
         }
     }
 }

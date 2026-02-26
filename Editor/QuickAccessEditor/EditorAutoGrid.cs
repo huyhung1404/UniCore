@@ -7,27 +7,27 @@ namespace UniCore.Editor.QuickAccess
 {
     internal static class EditorAutoGrid
     {
-        private const float k_MenuWidth = 18f;
-        private const float k_Width = 100f;
-        private const float k_Height = 21f;
-        private static readonly GUIContent moreIcon = EditorGUIUtility.IconContent("_Menu");
-        private static GUIStyle gridBgStyle;
-        private static GUIStyle buttonStyle;
-        private static GUIStyle labelStyle;
+        private const float k_menuWidth = 18f;
+        private const float k_width = 100f;
+        private const float k_height = 21f;
+        private static readonly GUIContent s_moreIcon = EditorGUIUtility.IconContent("_Menu");
+        private static GUIStyle s_gridBgStyle;
+        private static GUIStyle s_buttonStyle;
+        private static GUIStyle s_labelStyle;
 
         private static void InitGridStyle()
         {
-            if (gridBgStyle != null) return;
+            if (s_gridBgStyle != null) return;
 
-            gridBgStyle = new GUIStyle(EditorStyles.helpBox)
+            s_gridBgStyle = new GUIStyle(EditorStyles.helpBox)
             {
                 padding = new RectOffset(6, 6, 6, 6),
                 margin = new RectOffset(4, 4, 0, 4)
             };
 
-            buttonStyle = new GUIStyle("Button");
+            s_buttonStyle = new GUIStyle("Button");
 
-            labelStyle = new GUIStyle(EditorStyles.label)
+            s_labelStyle = new GUIStyle(EditorStyles.label)
             {
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold,
@@ -44,15 +44,15 @@ namespace UniCore.Editor.QuickAccess
 
             if (!string.IsNullOrEmpty(search)) items = items.Where(i => GetLabel(i).ToLower().Contains(search.ToLower())).ToList();
 
-            EditorGUILayout.BeginVertical(gridBgStyle);
+            EditorGUILayout.BeginVertical(s_gridBgStyle);
 
             var width = EditorGUIUtility.currentViewWidth - 32f;
-            var columns = Mathf.Max(1, Mathf.FloorToInt(width / k_Width));
+            var columns = Mathf.Max(1, Mathf.FloorToInt(width / k_width));
             var rows = Mathf.CeilToInt(items.Count / (float)columns);
 
             for (var r = 0; r < rows; r++)
             {
-                var rowRect = GUILayoutUtility.GetRect(0, k_Height);
+                var rowRect = GUILayoutUtility.GetRect(0, k_height);
 
                 const float spacing = 4f;
                 var itemWidth = (rowRect.width - (columns - 1) * spacing) / columns;
@@ -62,7 +62,7 @@ namespace UniCore.Editor.QuickAccess
                     var index = r * columns + c;
                     if (index >= items.Count) break;
 
-                    var rect = new Rect(rowRect.x + c * (itemWidth + spacing), rowRect.y, itemWidth, k_Height);
+                    var rect = new Rect(rowRect.x + c * (itemWidth + spacing), rowRect.y, itemWidth, k_height);
                     DrawSplitItem(rect, items[index], onClick, onEdit);
                 }
 
@@ -78,17 +78,17 @@ namespace UniCore.Editor.QuickAccess
         {
             var evt = Event.current;
 
-            GUI.Box(rect, GUIContent.none, buttonStyle);
+            GUI.Box(rect, GUIContent.none, s_buttonStyle);
 
-            var mainRect = new Rect(rect.x, rect.y, rect.width - k_MenuWidth, rect.height);
-            var menuRect = new Rect(rect.x + rect.width - k_MenuWidth, rect.y, k_MenuWidth, rect.height);
+            var mainRect = new Rect(rect.x, rect.y, rect.width - k_menuWidth, rect.height);
+            var menuRect = new Rect(rect.x + rect.width - k_menuWidth, rect.y, k_menuWidth, rect.height);
 
             var fullLabel = GetAssetLabel(a);
 
-            var truncated = Truncate(string.IsNullOrEmpty(a.name) ? fullLabel : a.name, labelStyle, mainRect.width - 6);
-            GUI.Label(mainRect, new GUIContent(truncated, fullLabel), labelStyle);
+            var truncated = Truncate(string.IsNullOrEmpty(a.Name) ? fullLabel : a.Name, s_labelStyle, mainRect.width - 6);
+            GUI.Label(mainRect, new GUIContent(truncated, fullLabel), s_labelStyle);
 
-            GUI.Label(menuRect, moreIcon, new GUIStyle
+            GUI.Label(menuRect, s_moreIcon, new GUIStyle
             {
                 alignment = TextAnchor.MiddleCenter
             });
@@ -109,14 +109,14 @@ namespace UniCore.Editor.QuickAccess
 
         private static string GetLabel(AssetAddress a)
         {
-            var path = AssetDatabase.GUIDToAssetPath(a.guidAsset);
+            var path = AssetDatabase.GUIDToAssetPath(a.GuidAsset);
             var obj = AssetDatabase.LoadAssetAtPath<Object>(path);
-            return string.IsNullOrEmpty(a.name) ? obj?.name ?? "Missing" : a.name;
+            return string.IsNullOrEmpty(a.Name) ? obj?.name ?? "Missing" : a.Name;
         }
 
         private static string GetAssetLabel(AssetAddress a)
         {
-            var path = AssetDatabase.GUIDToAssetPath(a.guidAsset);
+            var path = AssetDatabase.GUIDToAssetPath(a.GuidAsset);
             var obj = AssetDatabase.LoadAssetAtPath<Object>(path);
             return obj?.name ?? "Missing";
         }

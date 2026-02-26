@@ -12,9 +12,9 @@ namespace UniCore.Editor.AttributesDrawer
     public static class InterfaceReferenceUtility
     {
         private const float k_helpBoxHeight = 24;
-        private static GUIStyle normalInterfaceLabelStyle;
-        private static bool isOpeningQueued;
-        private static Texture2D styleTexture;
+        private static GUIStyle _normalInterfaceLabelStyle;
+        private static bool _isOpeningQueued;
+        private static Texture2D _styleTexture;
 
         public static void OnGUI(Rect position, SerializedProperty property, GUIContent label, InterfaceObjectArguments args)
         {
@@ -63,9 +63,9 @@ namespace UniCore.Editor.AttributesDrawer
         private static void ReplaceObjectPickerForControl(SerializedProperty property, InterfaceObjectArguments args, int controlID)
         {
             var currentObjectPickerID = EditorGUIUtility.GetObjectPickerControlID();
-            if (controlID != currentObjectPickerID || isOpeningQueued) return;
+            if (controlID != currentObjectPickerID || _isOpeningQueued) return;
             if (EditorWindow.focusedWindow == null) return;
-            isOpeningQueued = true;
+            _isOpeningQueued = true;
             EditorApplication.delayCall += () => OpenDelayed(property, args);
         }
 
@@ -75,29 +75,29 @@ namespace UniCore.Editor.AttributesDrawer
             const int additionalLeftWidth = 3;
             const int verticalIndent = 1;
             var content = EditorGUIUtility.TrTextContent(displayString);
-            var size = normalInterfaceLabelStyle.CalcSize(content);
+            var size = _normalInterfaceLabelStyle.CalcSize(content);
             var interfaceLabelPosition = position;
             interfaceLabelPosition.width = size.x + additionalLeftWidth;
             interfaceLabelPosition.x += position.width - interfaceLabelPosition.width - 18;
             interfaceLabelPosition.height -= verticalIndent * 2;
             interfaceLabelPosition.y += verticalIndent;
-            normalInterfaceLabelStyle.Draw(interfaceLabelPosition, EditorGUIUtility.TrTextContent(displayString), controlID, DragAndDrop.activeControlID == controlID, false);
+            _normalInterfaceLabelStyle.Draw(interfaceLabelPosition, EditorGUIUtility.TrTextContent(displayString), controlID, DragAndDrop.activeControlID == controlID, false);
         }
 
         private static void InitializeStyleIfNeeded()
         {
-            if (normalInterfaceLabelStyle != null) return;
-            normalInterfaceLabelStyle = new GUIStyle(EditorStyles.label);
+            if (_normalInterfaceLabelStyle != null) return;
+            _normalInterfaceLabelStyle = new GUIStyle(EditorStyles.label);
             var objectFieldStyle = EditorStyles.objectField;
-            normalInterfaceLabelStyle.font = objectFieldStyle.font;
-            normalInterfaceLabelStyle.fontSize = objectFieldStyle.fontSize;
-            normalInterfaceLabelStyle.fontStyle = objectFieldStyle.fontStyle;
-            normalInterfaceLabelStyle.alignment = TextAnchor.MiddleRight;
-            normalInterfaceLabelStyle.padding = new RectOffset(0, 2, 0, 0);
-            styleTexture = new Texture2D(1, 1);
-            styleTexture.SetPixel(0, 0, new Color(40 / 255f, 40 / 255f, 40 / 255f));
-            styleTexture.Apply();
-            normalInterfaceLabelStyle.normal.background = styleTexture;
+            _normalInterfaceLabelStyle.font = objectFieldStyle.font;
+            _normalInterfaceLabelStyle.fontSize = objectFieldStyle.fontSize;
+            _normalInterfaceLabelStyle.fontStyle = objectFieldStyle.fontStyle;
+            _normalInterfaceLabelStyle.alignment = TextAnchor.MiddleRight;
+            _normalInterfaceLabelStyle.padding = new RectOffset(0, 2, 0, 0);
+            _styleTexture = new Texture2D(1, 1);
+            _styleTexture.SetPixel(0, 0, new Color(40 / 255f, 40 / 255f, 40 / 255f));
+            _styleTexture.Apply();
+            _normalInterfaceLabelStyle.normal.background = _styleTexture;
         }
 
         public static float GetPropertyHeight(SerializedProperty property, InterfaceObjectArguments args)
@@ -129,10 +129,10 @@ namespace UniCore.Editor.AttributesDrawer
             {
                 if (success) property.objectReferenceValue = obj;
             }, filter, args.ObjectType);
-            InterfaceSelectorWindow.Instance.position = win.position;
+            InterfaceSelectorWindow.s_instance.position = win.position;
             var content = new GUIContent($"Select {args.ObjectType.Name} ({args.InterfaceType.Name})");
-            InterfaceSelectorWindow.Instance.titleContent = content;
-            isOpeningQueued = false;
+            InterfaceSelectorWindow.s_instance.titleContent = content;
+            _isOpeningQueued = false;
         }
 
         private static UnityEngine.Object GetClosestAssignableComponent(UnityEngine.Object obj, InterfaceObjectArguments args)

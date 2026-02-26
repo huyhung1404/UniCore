@@ -7,22 +7,22 @@ namespace UniCore.Editor
     [CustomEditor(typeof(StorageSettings))]
     public class StorageSettingsEditor : UnityEditor.Editor
     {
-        private SerializedProperty versionProperty;
+        private SerializedProperty _versionProperty;
 
-        private SerializedProperty serializationTypeProperty;
-        private SerializedProperty serializerCustomProperty;
+        private SerializedProperty _serializationTypeProperty;
+        private SerializedProperty _serializerCustomProperty;
 
-        private SerializedProperty keyTypeProperty;
-        private SerializedProperty keyCustomProperty;
+        private SerializedProperty _keyTypeProperty;
+        private SerializedProperty _keyCustomProperty;
 
-        private SerializedProperty encryptionTypeProperty;
-        private SerializedProperty encryptorCustomProperty;
+        private SerializedProperty _encryptionTypeProperty;
+        private SerializedProperty _encryptorCustomProperty;
 
-        private SerializedProperty protectorTypeProperty;
-        private SerializedProperty protectorCustomProperty;
+        private SerializedProperty _protectorTypeProperty;
+        private SerializedProperty _protectorCustomProperty;
 
-        private SerializedProperty storageTypeProperty;
-        private SerializedProperty storageCustomProperty;
+        private SerializedProperty _storageTypeProperty;
+        private SerializedProperty _storageCustomProperty;
 
         [MenuItem("UniCore/Settings/Storage", priority = 1)]
         public static void CreateStorageSettings()
@@ -52,40 +52,40 @@ namespace UniCore.Editor
 
         private void OnEnable()
         {
-            versionProperty = serializedObject.FindProperty("version");
+            _versionProperty = serializedObject.FindProperty("m_version");
 
-            serializationTypeProperty = serializedObject.FindProperty("serializationType");
-            serializerCustomProperty = serializedObject.FindProperty("serializerCustom");
+            _serializationTypeProperty = serializedObject.FindProperty("m_serializationType");
+            _serializerCustomProperty = serializedObject.FindProperty("m_serializerCustom");
 
-            keyTypeProperty = serializedObject.FindProperty("keyType");
-            keyCustomProperty = serializedObject.FindProperty("keyCustom");
+            _keyTypeProperty = serializedObject.FindProperty("m_keyType");
+            _keyCustomProperty = serializedObject.FindProperty("m_keyCustom");
 
-            encryptionTypeProperty = serializedObject.FindProperty("encryptionType");
-            encryptorCustomProperty = serializedObject.FindProperty("encryptorCustom");
+            _encryptionTypeProperty = serializedObject.FindProperty("m_encryptionType");
+            _encryptorCustomProperty = serializedObject.FindProperty("m_encryptorCustom");
 
-            protectorTypeProperty = serializedObject.FindProperty("protectorType");
-            protectorCustomProperty = serializedObject.FindProperty("protectorCustom");
+            _protectorTypeProperty = serializedObject.FindProperty("m_protectorType");
+            _protectorCustomProperty = serializedObject.FindProperty("m_protectorCustom");
 
-            storageTypeProperty = serializedObject.FindProperty("storageType");
-            storageCustomProperty = serializedObject.FindProperty("storageCustom");
+            _storageTypeProperty = serializedObject.FindProperty("m_storageType");
+            _storageCustomProperty = serializedObject.FindProperty("m_storageCustom");
         }
 
         public override void OnInspectorGUI()
         {
-            EditorGUILayout.PropertyField(versionProperty);
+            EditorGUILayout.PropertyField(_versionProperty);
             EditorGUILayout.Space(5);
 
-            DrawField("Serialize", serializationTypeProperty, (int)SerializationType.Custom, serializerCustomProperty);
+            DrawField("Serialize", _serializationTypeProperty, (int)SerializationType.Custom, _serializerCustomProperty);
 
-            if (encryptionTypeProperty.enumValueIndex == (int)EncryptionType.AES ||
-                protectorTypeProperty.enumValueIndex == (int)ProtectorType.SHA256)
+            if (_encryptionTypeProperty.enumValueIndex == (int)EncryptionType.AES ||
+                _protectorTypeProperty.enumValueIndex == (int)ProtectorType.SHA256)
             {
-                DrawField("Key", keyTypeProperty, (int)KeyType.Custom, keyCustomProperty);
+                DrawField("Key", _keyTypeProperty, (int)KeyType.Custom, _keyCustomProperty);
             }
 
-            DrawField("Encryptor", encryptionTypeProperty, (int)EncryptionType.Custom, encryptorCustomProperty);
-            DrawField("Protector", protectorTypeProperty, (int)ProtectorType.Custom, protectorCustomProperty);
-            DrawField("Storage", storageTypeProperty, (int)StorageType.Custom, storageCustomProperty);
+            DrawField("Encryptor", _encryptionTypeProperty, (int)EncryptionType.Custom, _encryptorCustomProperty);
+            DrawField("Protector", _protectorTypeProperty, (int)ProtectorType.Custom, _protectorCustomProperty);
+            DrawField("Storage", _storageTypeProperty, (int)StorageType.Custom, _storageCustomProperty);
         }
 
         private static void DrawField(string title, SerializedProperty enumProperty, int targetCustomId, SerializedProperty customProperty)

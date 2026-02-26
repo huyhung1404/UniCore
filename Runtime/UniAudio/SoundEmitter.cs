@@ -9,38 +9,38 @@ namespace UniCore.Audio
     [RequireComponent(typeof(AudioSource))]
     public class SoundEmitter : MonoBehaviour, ISignalListener<StopSoundSignal>, ISignalListener<ChangeSoundSignal>
     {
-        private AudioSource source;
-        private int? configHash;
-        private float timeRequire;
-        private bool needReturnToPool;
-        private int? soundId;
+        private AudioSource _source;
+        private int? _configHash;
+        private float _timeRequire;
+        private bool _needReturnToPool;
+        private int? _soundId;
 
         private void Awake()
         {
-            source = GetComponent<AudioSource>();
-            source.playOnAwake = false;
+            _source = GetComponent<AudioSource>();
+            _source.playOnAwake = false;
         }
 
         public void PlayAudioClip(in PlaySoundSignal signal, AudioClip clip, AudioConfiguration configuration)
         {
-            source.clip = clip;
-            if (configuration != null && (configHash == null || configHash != configuration.GetHashCode()))
+            _source.clip = clip;
+            if (configuration != null && (_configHash == null || _configHash != configuration.GetHashCode()))
             {
-                configHash = configuration.GetHashCode();
+                _configHash = configuration.GetHashCode();
                 UpdateConfig(configuration);
             }
 
-            transform.parent = signal.parent;
-            transform.position = signal.position;
+            transform.parent = signal.Parent;
+            transform.position = signal.Position;
 
-            source.loop = signal.isLoop;
-            source.time = 0f;
-            source.Play();
-            timeRequire = clip.length / Mathf.Abs(source.pitch);
-            if (signal.isLoop) timeRequire = 0f;
-            needReturnToPool = true;
-            soundId = signal.soundId;
-            if (soundId != null) RegisterSoundEvent();
+            _source.loop = signal.IsLoop;
+            _source.time = 0f;
+            _source.Play();
+            _timeRequire = clip.length / Mathf.Abs(_source.pitch);
+            if (signal.IsLoop) _timeRequire = 0f;
+            _needReturnToPool = true;
+            _soundId = signal.SoundId;
+            if (_soundId != null) RegisterSoundEvent();
         }
 
         private void RegisterSoundEvent()
@@ -51,28 +51,28 @@ namespace UniCore.Audio
 
         private void Stop()
         {
-            timeRequire = 0;
-            source.Stop();
+            _timeRequire = 0;
+            _source.Stop();
             NotifyBeingFinish();
         }
 
         public bool IsPlaying()
         {
-            return source.isPlaying && timeRequire > 0;
+            return _source.isPlaying && _timeRequire > 0;
         }
 
         private void NotifyBeingFinish()
         {
-            if (!needReturnToPool) return;
+            if (!_needReturnToPool) return;
             SoundEmitterPool.Push(this);
-            needReturnToPool = false;
+            _needReturnToPool = false;
         }
 
         private void LateUpdate()
         {
-            if (timeRequire > 0)
+            if (_timeRequire > 0)
             {
-                timeRequire -= Time.deltaTime;
+                _timeRequire -= Time.deltaTime;
                 return;
             }
 
@@ -81,63 +81,63 @@ namespace UniCore.Audio
 
         public void OnSignal(StopSoundSignal signal)
         {
-            if (signal.soundId == soundId) Stop();
+            if (signal.SoundId == _soundId) Stop();
         }
 
         public void OnSignal(ChangeSoundSignal signal)
         {
-            if (signal.soundId != soundId) return;
-            _ = ChangeSound(signal.clip);
+            if (signal.SoundId != _soundId) return;
+            _ = ChangeSound(signal.Clip);
         }
 
         private async UniTaskVoid ChangeSound(string clipAddress)
         {
-            if (!source) return;
-            var currentSoundId = soundId;
+            if (!_source) return;
+            var currentSoundId = _soundId;
             var clipData = await AudioSystem.GetClipData(clipAddress);
-            if (clipData == null || currentSoundId != soundId) return;
-            var newClip = clipData.clips[0];
+            if (clipData == null || currentSoundId != _soundId) return;
+            var newClip = clipData.Clips[0];
             const float fadeOutTime = 0.15f;
-            var startVolume = source.volume;
+            var startVolume = _source.volume;
             var t = 0f;
 
-            while (t < fadeOutTime && source && source.isPlaying)
+            while (t < fadeOutTime && _source && _source.isPlaying)
             {
                 t += Time.deltaTime;
-                source.volume = Mathf.Lerp(startVolume, 0f, t / fadeOutTime);
+                _source.volume = Mathf.Lerp(startVolume, 0f, t / fadeOutTime);
                 await UniTask.Yield();
             }
 
-            source.Stop();
+            _source.Stop();
 
-            source.clip = newClip;
-            source.time = 0f;
-            source.Play();
+            _source.clip = newClip;
+            _source.time = 0f;
+            _source.Play();
 
-            if (!source.loop) timeRequire = newClip.length / Mathf.Abs(source.pitch);
+            if (!_source.loop) _timeRequire = newClip.length / Mathf.Abs(_source.pitch);
 
             const float fadeInTime = 0.15f;
             t = 0f;
 
-            while (t < fadeInTime && source)
+            while (t < fadeInTime && _source)
             {
                 t += Time.deltaTime;
-                source.volume = Mathf.Lerp(0f, startVolume, t / fadeInTime);
+                _source.volume = Mathf.Lerp(0f, startVolume, t / fadeInTime);
                 await UniTask.Yield();
             }
 
-            source.volume = startVolume;
+            _source.volume = startVolume;
         }
 
         private void OnDisable()
         {
-            if (soundId != null)
+            if (_soundId != null)
             {
                 SignalSystem.Unregister<StopSoundSignal>(this);
                 SignalSystem.Unregister<ChangeSoundSignal>(this);
                 SignalSystem.Dispatch(new SoundFinishSignal
                 {
-                    soundId = soundId.Value
+                    SoundId = _soundId.Value
                 });
             }
 
@@ -147,24 +147,24 @@ namespace UniCore.Audio
 
         private void UpdateConfig(AudioConfiguration configuration)
         {
-            source.outputAudioMixerGroup = configuration.output;
-            source.mute = configuration.mute;
-            source.bypassEffects = configuration.bypassEffects;
-            source.bypassListenerEffects = configuration.bypassListenerEffects;
-            source.bypassReverbZones = configuration.bypassReverbZones;
+            _source.outputAudioMixerGroup = configuration.Output;
+            _source.mute = configuration.Mute;
+            _source.bypassEffects = configuration.BypassEffects;
+            _source.bypassListenerEffects = configuration.BypassListenerEffects;
+            _source.bypassReverbZones = configuration.BypassReverbZones;
 
-            source.priority = configuration.priority;
-            source.volume = configuration.volume;
-            source.pitch = configuration.pitch;
-            source.panStereo = configuration.stereoPan;
-            source.spatialBlend = configuration.spatialBlend;
-            source.reverbZoneMix = configuration.reverbZoneMix;
+            _source.priority = configuration.Priority;
+            _source.volume = configuration.Volume;
+            _source.pitch = configuration.Pitch;
+            _source.panStereo = configuration.StereoPan;
+            _source.spatialBlend = configuration.SpatialBlend;
+            _source.reverbZoneMix = configuration.ReverbZoneMix;
 
-            source.dopplerLevel = configuration.dopplerLevel;
-            source.spread = configuration.spread;
-            source.rolloffMode = configuration.volumeRolloff;
-            source.minDistance = configuration.minDistance;
-            source.maxDistance = configuration.maxDistance;
+            _source.dopplerLevel = configuration.DopplerLevel;
+            _source.spread = configuration.Spread;
+            _source.rolloffMode = configuration.VolumeRolloff;
+            _source.minDistance = configuration.MinDistance;
+            _source.maxDistance = configuration.MaxDistance;
         }
     }
 }

@@ -6,13 +6,13 @@ namespace UniCore.Audio.Pool
 {
     internal static class SoundEmitterPool
     {
-        private static readonly Queue<SoundEmitter> pool = new Queue<SoundEmitter>(32);
+        private static readonly Queue<SoundEmitter> s_pool = new Queue<SoundEmitter>(32);
 
         public static void Prewarm(int count)
         {
             for (var i = 0; i < count; i++)
             {
-                var o = Object.Instantiate(AudioSystem.instance.settings.SoundEmitterPrefab);
+                var o = Object.Instantiate(AudioSystem.s_Instance.Settings.SoundEmitterPrefab);
                 Push(o);
             }
         }
@@ -20,14 +20,14 @@ namespace UniCore.Audio.Pool
         public static void Push(SoundEmitter emitter)
         {
             emitter.gameObject.SetActive(false);
-            emitter.transform.parent = AudioSystem.instance.transform;
-            pool.Enqueue(emitter);
+            emitter.transform.parent = AudioSystem.s_Instance.transform;
+            s_pool.Enqueue(emitter);
         }
 
         public static SoundEmitter Pop()
         {
-            if (pool.Count <= 0) return Object.Instantiate(AudioSystem.instance.settings.SoundEmitterPrefab);
-            var r = pool.Dequeue();
+            if (s_pool.Count <= 0) return Object.Instantiate(AudioSystem.s_Instance.Settings.SoundEmitterPrefab);
+            var r = s_pool.Dequeue();
             r.gameObject.SetActive(true);
             return r;
         }

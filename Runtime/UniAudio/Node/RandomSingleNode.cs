@@ -16,9 +16,9 @@ namespace UniCore.Audio.Node
             Sequential,
         }
 
-        [SerializeField] private SequenceMode sequenceMode = SequenceMode.RandomNoImmediateRepeat;
-        private int nextClipToPlay = -1;
-        private int lastClipPlayed = -1;
+        [SerializeField] private SequenceMode _sequenceMode = SequenceMode.RandomNoImmediateRepeat;
+        private int _nextClipToPlay = -1;
+        private int _lastClipPlayed = -1;
 
         private void OnEnable()
         {
@@ -29,44 +29,44 @@ namespace UniCore.Audio.Node
         {
             var data = ClipDataPool.Pop();
             var reference = GetNextClip();
-            data.clips.Add(await reference.LoadAsync());
+            data.Clips.Add(await reference.LoadAsync());
             return data;
         }
 
         private AudioClipReference GetNextClip()
         {
-            if (references.Length == 1) return references[0];
+            if (_references.Length == 1) return _references[0];
 
-            if (nextClipToPlay == -1)
+            if (_nextClipToPlay == -1)
             {
-                nextClipToPlay = sequenceMode == SequenceMode.Sequential ? 0 : Random.Range(0, references.Length);
+                _nextClipToPlay = _sequenceMode == SequenceMode.Sequential ? 0 : Random.Range(0, _references.Length);
             }
             else
             {
-                switch (sequenceMode)
+                switch (_sequenceMode)
                 {
                     default:
                     case SequenceMode.Random:
-                        nextClipToPlay = Random.Range(0, references.Length);
+                        _nextClipToPlay = Random.Range(0, _references.Length);
                         break;
 
                     case SequenceMode.RandomNoImmediateRepeat:
                         do
                         {
-                            nextClipToPlay = Random.Range(0, references.Length);
-                        } while (nextClipToPlay == lastClipPlayed);
+                            _nextClipToPlay = Random.Range(0, _references.Length);
+                        } while (_nextClipToPlay == _lastClipPlayed);
 
                         break;
 
                     case SequenceMode.Sequential:
-                        nextClipToPlay = (int)Mathf.Repeat(++nextClipToPlay, references.Length);
+                        _nextClipToPlay = (int)Mathf.Repeat(++_nextClipToPlay, _references.Length);
                         break;
                 }
             }
 
-            lastClipPlayed = nextClipToPlay;
+            _lastClipPlayed = _nextClipToPlay;
 
-            return references[nextClipToPlay];
+            return _references[_nextClipToPlay];
         }
     }
 }

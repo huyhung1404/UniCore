@@ -6,10 +6,10 @@ namespace UniCore.Signal
 {
     public class SignalListenerBehaviour : MonoBehaviour
     {
-        [SerializeField] private bool generateCache = true;
+        [SerializeField] private bool m_generateCache = true;
 
-        private static readonly Type listenerGenericType = typeof(ISignalListener<>);
-        private static Dictionary<Type, Type[]> typeCache;
+        private static readonly Type s_listenerGenericType = typeof(ISignalListener<>);
+        private static Dictionary<Type, Type[]> s_typeCache;
 
         public virtual void OnEnable() => Auto(true);
         public virtual void OnDisable() => Auto(false);
@@ -18,13 +18,13 @@ namespace UniCore.Signal
         {
             var monoType = GetType();
 
-            if (generateCache)
+            if (m_generateCache)
             {
-                typeCache ??= new Dictionary<Type, Type[]>(8);
-                if (!typeCache.TryGetValue(monoType, out var signals))
+                s_typeCache ??= new Dictionary<Type, Type[]>(8);
+                if (!s_typeCache.TryGetValue(monoType, out var signals))
                 {
                     signals = BuildSignalArray(monoType);
-                    typeCache[monoType] = signals;
+                    s_typeCache[monoType] = signals;
                 }
 
                 for (var i = 0; i < signals.Length; i++)
@@ -43,7 +43,7 @@ namespace UniCore.Signal
             {
                 var itf = interfaces[i];
                 if (!itf.IsGenericType) continue;
-                if (itf.GetGenericTypeDefinition() != listenerGenericType) continue;
+                if (itf.GetGenericTypeDefinition() != s_listenerGenericType) continue;
 
                 var signalType = itf.GetGenericArguments()[0];
 
@@ -63,7 +63,7 @@ namespace UniCore.Signal
             {
                 var itf = interfaces[i];
                 if (!itf.IsGenericType) continue;
-                if (itf.GetGenericTypeDefinition() != listenerGenericType) continue;
+                if (itf.GetGenericTypeDefinition() != s_listenerGenericType) continue;
 
                 list.Add(itf.GetGenericArguments()[0]);
             }

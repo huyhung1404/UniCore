@@ -5,13 +5,13 @@ namespace UniCore.Editor.QuickAccess
 {
     internal static class PopupGUI
     {
-        private static GUIStyle bgStyle;
+        private static GUIStyle s_bgStyle;
 
         public static void BeginPopup()
         {
-            if (bgStyle == null)
+            if (s_bgStyle == null)
             {
-                bgStyle = new GUIStyle(EditorStyles.helpBox)
+                s_bgStyle = new GUIStyle(EditorStyles.helpBox)
                 {
                     padding = new RectOffset(8, 8, 8, 8)
                 };
@@ -31,7 +31,7 @@ namespace UniCore.Editor.QuickAccess
                 new Vector3(0, 0));
             Handles.EndGUI();
 
-            GUILayout.BeginVertical(bgStyle);
+            GUILayout.BeginVertical(s_bgStyle);
         }
 
         public static void EndPopup()

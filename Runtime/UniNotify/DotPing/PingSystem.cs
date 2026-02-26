@@ -8,44 +8,44 @@ namespace UniCore.Notify.DotPing
 {
     public class PingSystem : MonoBehaviour
     {
-        [SerializeField] private PingGraphic dotGraphic;
-        [SerializeField] private PingGraphic upgradeGraphic;
+        [SerializeField] private PingGraphic m_dotGraphic;
+        [SerializeField] private PingGraphic m_upgradeGraphic;
 
-        internal static PingLocationData locationData;
+        internal static PingLocationData s_LocationData;
         internal static event Action<string, bool> OnPingChanged;
-        private const string k_PrefsKey = "user.location_data";
-        private static PingSystem instance;
-        public static Transform GraphicParent() => instance.transform;
+        private const string k_prefsKey = "user.location_data";
+        private static PingSystem s_instance;
+        public static Transform GraphicParent() => s_instance.transform;
 
         private void Awake()
         {
-            instance = this;
+            s_instance = this;
             DontDestroyOnLoad(gameObject);
             LoadData();
         }
 
         internal static void LoadData()
         {
-            var json = PlayerPrefs.GetString(k_PrefsKey, null);
-            locationData = (string.IsNullOrEmpty(json) ? null : JsonConvert.DeserializeObject<PingLocationData>(json)) ?? new PingLocationData
+            var json = PlayerPrefs.GetString(k_prefsKey, null);
+            s_LocationData = (string.IsNullOrEmpty(json) ? null : JsonConvert.DeserializeObject<PingLocationData>(json)) ?? new PingLocationData
             {
-                nodes = new Dictionary<string, PingLocationNode>(15),
-                childrenMap = new Dictionary<string, List<string>>(5)
+                Nodes = new Dictionary<string, PingLocationNode>(15),
+                ChildrenMap = new Dictionary<string, List<string>>(5)
             };
         }
 
         internal static PingGraphic CreateNewPingGraphic(GraphicType type)
         {
-            return Instantiate(instance.GetPingPrefab(type), instance.transform);
+            return Instantiate(s_instance.GetPingPrefab(type), s_instance.transform);
         }
 
         internal PingGraphic GetPingPrefab(GraphicType type)
         {
             return type switch
             {
-                GraphicType.Dot => dotGraphic,
-                GraphicType.Upgrade => upgradeGraphic,
-                _ => dotGraphic
+                GraphicType.Dot => m_dotGraphic,
+                GraphicType.Upgrade => m_upgradeGraphic,
+                _ => m_dotGraphic
             };
         }
 
@@ -56,32 +56,32 @@ namespace UniCore.Notify.DotPing
 
         public static void Push(string id, bool addIfContain = true)
         {
-            var nodes = locationData.nodes;
-            var childrenMap = locationData.childrenMap;
+            var nodes = s_LocationData.Nodes;
+            var childrenMap = s_LocationData.ChildrenMap;
             if (nodes.ContainsKey(id))
             {
                 var node = nodes[id];
-                if (!addIfContain && node.value > 0) return;
-                node.value++;
+                if (!addIfContain && node.Value > 0) return;
+                node.Value++;
                 nodes[id] = node;
-                if (node.value != 1) return;
+                if (node.Value != 1) return;
                 NotifyPingChange(id, true);
-                if (string.IsNullOrEmpty(node.parentId)) return;
-                childrenMap[node.parentId].Add(id);
-                UpdateParentPing(node.parentId);
+                if (string.IsNullOrEmpty(node.ParentId)) return;
+                childrenMap[node.ParentId].Add(id);
+                UpdateParentPing(node.ParentId);
                 return;
             }
 
             var parentId = GetParentId(id);
             var newNode = new PingLocationNode
             {
-                id = id,
-                parentId = parentId,
-                value = 1,
-                hasChild = false
+                Id = id,
+                ParentId = parentId,
+                Value = 1,
+                HasChild = false
             };
             nodes[id] = newNode;
-            NotifyPingChange(id, newNode.isActive);
+            NotifyPingChange(id, newNode.IsActive);
 
             if (string.IsNullOrEmpty(parentId)) return;
             if (!childrenMap.ContainsKey(parentId))
@@ -95,27 +95,27 @@ namespace UniCore.Notify.DotPing
 
         public static void Pop(string id, bool forceHide = false, bool removeIfInactive = false)
         {
-            var nodes = locationData.nodes;
-            var childrenMap = locationData.childrenMap;
+            var nodes = s_LocationData.Nodes;
+            var childrenMap = s_LocationData.ChildrenMap;
             if (!nodes.TryGetValue(id, out var node)) return;
-            node.value = forceHide ? 0 : node.value - 1;
-            if (node.value <= 0)
+            node.Value = forceHide ? 0 : node.Value - 1;
+            if (node.Value <= 0)
             {
-                if (node.hasChild) removeIfInactive = false;
+                if (node.HasChild) removeIfInactive = false;
                 if (removeIfInactive)
                 {
                     nodes.Remove(id);
                 }
                 else
                 {
-                    node.value = 0;
+                    node.Value = 0;
                     nodes[id] = node;
                 }
 
                 NotifyPingChange(id, false);
-                if (string.IsNullOrEmpty(node.parentId)) return;
-                if (childrenMap.TryGetValue(node.parentId, out var lisId)) lisId.Remove(id);
-                UpdateParentPing(node.parentId);
+                if (string.IsNullOrEmpty(node.ParentId)) return;
+                if (childrenMap.TryGetValue(node.ParentId, out var lisId)) lisId.Remove(id);
+                UpdateParentPing(node.ParentId);
                 return;
             }
 
@@ -124,18 +124,18 @@ namespace UniCore.Notify.DotPing
 
         public static bool IsActive(string id)
         {
-            return locationData.nodes.ContainsKey(id) && locationData.nodes[id].isActive;
+            return s_LocationData.Nodes.ContainsKey(id) && s_LocationData.Nodes[id].IsActive;
         }
 
         private static void UpdateParentPing(string id)
         {
             var isHasChildrenPing = false;
-            if (locationData.childrenMap.TryGetValue(id, out var value))
+            if (s_LocationData.ChildrenMap.TryGetValue(id, out var value))
             {
                 for (var index = value.Count - 1; index >= 0; index--)
                 {
                     var childId = value[index];
-                    if (!locationData.nodes.ContainsKey(childId) || !locationData.nodes[childId].isActive) continue;
+                    if (!s_LocationData.Nodes.ContainsKey(childId) || !s_LocationData.Nodes[childId].IsActive) continue;
                     isHasChildrenPing = true;
                     break;
                 }
@@ -143,20 +143,20 @@ namespace UniCore.Notify.DotPing
 
             if (isHasChildrenPing)
             {
-                if (locationData.nodes.TryGetValue(id, out var node))
+                if (s_LocationData.Nodes.TryGetValue(id, out var node))
                 {
-                    node.hasChild = true;
-                    NotifyPingChange(id, node.isActive);
-                    locationData.nodes[id] = node;
+                    node.HasChild = true;
+                    NotifyPingChange(id, node.IsActive);
+                    s_LocationData.Nodes[id] = node;
                     return;
                 }
 
                 Push(id);
-                var nodePush = locationData.nodes[id];
-                nodePush.value = 0;
-                nodePush.hasChild = true;
-                NotifyPingChange(id, nodePush.isActive);
-                locationData.nodes[id] = nodePush;
+                var nodePush = s_LocationData.Nodes[id];
+                nodePush.Value = 0;
+                nodePush.HasChild = true;
+                NotifyPingChange(id, nodePush.IsActive);
+                s_LocationData.Nodes[id] = nodePush;
                 return;
             }
 
@@ -165,12 +165,12 @@ namespace UniCore.Notify.DotPing
 
         private static void PopHasChild(string id)
         {
-            if (!locationData.nodes.TryGetValue(id, out var popNode)) return;
-            popNode.hasChild = false;
-            locationData.nodes[id] = popNode;
-            NotifyPingChange(popNode.id, popNode.isActive);
-            if (string.IsNullOrEmpty(popNode.parentId)) return;
-            UpdateParentPing(popNode.parentId);
+            if (!s_LocationData.Nodes.TryGetValue(id, out var popNode)) return;
+            popNode.HasChild = false;
+            s_LocationData.Nodes[id] = popNode;
+            NotifyPingChange(popNode.Id, popNode.IsActive);
+            if (string.IsNullOrEmpty(popNode.ParentId)) return;
+            UpdateParentPing(popNode.ParentId);
         }
 
         private static string GetParentId(string id)
@@ -195,7 +195,7 @@ namespace UniCore.Notify.DotPing
 #if UNITY_EDITOR || UNITY_IOS
         private void OnApplicationPause(bool pauseStatus)
         {
-            if (locationData == null) return;
+            if (s_LocationData == null) return;
             if (pauseStatus)
             {
 #if !UNITY_EDITOR
@@ -208,21 +208,21 @@ namespace UniCore.Notify.DotPing
 #if UNITY_EDITOR
         private void OnApplicationQuit()
         {
-            if (locationData == null) return;
+            if (s_LocationData == null) return;
             SaveData();
         }
 #endif
 
         internal static void SaveData()
         {
-            var json = JsonConvert.SerializeObject(locationData);
-            PlayerPrefs.SetString(k_PrefsKey, json);
+            var json = JsonConvert.SerializeObject(s_LocationData);
+            PlayerPrefs.SetString(k_prefsKey, json);
         }
 
         internal static void ClearData()
         {
-            locationData = null;
-            PlayerPrefs.DeleteKey(k_PrefsKey);
+            s_LocationData = null;
+            PlayerPrefs.DeleteKey(k_prefsKey);
         }
     }
 }

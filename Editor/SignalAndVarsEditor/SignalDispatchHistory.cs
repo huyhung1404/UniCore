@@ -6,20 +6,20 @@ namespace UniCore.Editor
 {
     internal static class SignalDispatchHistory
     {
-        private const int MaxRecords = 50;
-        private static readonly Queue<string> _records = new(MaxRecords);
+        private const int k_maxRecords = 50;
+        private static readonly Queue<string> s_records = new(k_maxRecords);
 
         public static void Record(Type signalType, SignalScope scope)
         {
-            if (_records.Count >= MaxRecords)
-                _records.Dequeue();
+            if (s_records.Count >= k_maxRecords)
+                s_records.Dequeue();
 
-            _records.Enqueue(
+            s_records.Enqueue(
                 $"[{UnityEngine.Time.frameCount}] {signalType.Name} | Scope: {scope}"
             );
         }
 
-        public static IEnumerable<string> Records => _records;
-        public static void Clear() => _records.Clear();
+        public static IEnumerable<string> Records => s_records;
+        public static void Clear() => s_records.Clear();
     }
 }

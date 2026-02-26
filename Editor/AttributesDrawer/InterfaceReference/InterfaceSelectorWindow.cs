@@ -24,37 +24,37 @@ namespace UniCore.Editor.AttributesDrawer
 
         public class ToggleGroup
         {
-            private readonly List<Toggle> toggles = new List<Toggle>();
+            private readonly List<Toggle> _toggles = new List<Toggle>();
 
             public event EventHandler<Toggle> OnToggleChanged;
 
             public void RegisterToggle(Toggle toggle)
             {
-                if (toggle == null || toggles.Contains(toggle)) return;
+                if (toggle == null || _toggles.Contains(toggle)) return;
 
-                toggles.Add(toggle);
+                _toggles.Add(toggle);
                 toggle.RegisterValueChangedCallback(ToggleValueChanged);
             }
 
             public void UnregisterToggle(Toggle toggle)
             {
-                if (!toggles.Remove(toggle)) return;
+                if (!_toggles.Remove(toggle)) return;
 
                 toggle.UnregisterValueChangedCallback(ToggleValueChanged);
             }
 
             public void Validate()
             {
-                if (toggles.Count == 0) return;
+                if (_toggles.Count == 0) return;
 
                 var activeToggle = GetFirstActiveToggle();
                 if (activeToggle == null)
                 {
-                    activeToggle = toggles[0];
+                    activeToggle = _toggles[0];
                     activeToggle.value = true;
                 }
 
-                foreach (var toggle in toggles.Where(toggle => toggle.value))
+                foreach (var toggle in _toggles.Where(toggle => toggle.value))
                 {
                     toggle.SetValueWithoutNotify(false);
                 }
@@ -62,7 +62,7 @@ namespace UniCore.Editor.AttributesDrawer
 
             public Toggle GetFirstActiveToggle()
             {
-                return toggles.Find(x => x.value);
+                return _toggles.Find(x => x.value);
             }
 
             public bool IsAnyOn()
@@ -79,7 +79,7 @@ namespace UniCore.Editor.AttributesDrawer
             {
                 ValidateToggleIsInGroup(targetToggle);
 
-                foreach (var toggle in toggles.Where(toggle => toggle != targetToggle))
+                foreach (var toggle in _toggles.Where(toggle => toggle != targetToggle))
                 {
                     toggle.SetValueWithoutNotify(false);
                 }
@@ -92,7 +92,7 @@ namespace UniCore.Editor.AttributesDrawer
 
             private void ValidateToggleIsInGroup(Toggle toggle)
             {
-                if (toggle == null || !toggles.Contains(toggle))
+                if (toggle == null || !_toggles.Contains(toggle))
                     throw new ArgumentException(string.Format("Toggle {0} is not part of ToggleGroup {1}", new object[] { toggle, this }));
             }
         }
@@ -104,33 +104,33 @@ namespace UniCore.Editor.AttributesDrawer
             public string Label;
         }
 
-        internal static InterfaceSelectorWindow Instance { get; private set; }
-        private static readonly ItemInfo nullItem = new ItemInfo() { InstanceID = null, Label = "None" };
-        private Action<Object> selectionChangedCallback;
-        private Action<Object, bool> selectorClosedCallback;
-        private ObjectSelectorFilter filter;
-        private SerializedProperty editingProperty;
-        private List<ItemInfo> allItems;
-        private List<ItemInfo> filteredItems;
-        private ItemInfo currentItem;
-        private string searchText;
-        private bool userCanceled;
-        private bool showSceneObjects = true;
-        private int undoGroup;
-        private ToolbarSearchField searchBox;
-        private ListView listView;
-        private Label detailsLabel;
-        private Label detailsIndexLabel;
-        private Label detailsTypeLabel;
-        private Tab sceneTab;
-        private Tab assetsTab;
+        internal static InterfaceSelectorWindow s_instance { get; private set; }
+        private static readonly ItemInfo s_nullItem = new ItemInfo() { InstanceID = null, Label = "None" };
+        private Action<Object> _selectionChangedCallback;
+        private Action<Object, bool> _selectorClosedCallback;
+        private ObjectSelectorFilter _filter;
+        private SerializedProperty _editingProperty;
+        private List<ItemInfo> _allItems;
+        private List<ItemInfo> _filteredItems;
+        private ItemInfo _currentItem;
+        private string _searchText;
+        private bool _userCanceled;
+        private bool _showSceneObjects = true;
+        private int _undoGroup;
+        private ToolbarSearchField _searchBox;
+        private ListView _listView;
+        private Label _detailsLabel;
+        private Label _detailsIndexLabel;
+        private Label _detailsTypeLabel;
+        private Tab _sceneTab;
+        private Tab _assetsTab;
 
         public string SearchText
         {
-            get => searchText;
+            get => _searchText;
             set
             {
-                searchText = value;
+                _searchText = value;
                 FilterItems();
             }
         }
@@ -141,15 +141,15 @@ namespace UniCore.Editor.AttributesDrawer
             ObjectSelectorFilter filter,
             Type objectType)
         {
-            if (Instance == null) Instance = CreateInstance<InterfaceSelectorWindow>();
+            if (s_instance == null) s_instance = CreateInstance<InterfaceSelectorWindow>();
             var isScriptableObject = objectType.IsSubclassOf(typeof(ScriptableObject)) || objectType == typeof(ScriptableObject);
-            Instance.showSceneObjects = !isScriptableObject;
-            Instance.editingProperty = property;
-            Instance.selectionChangedCallback = onSelectionChanged;
-            Instance.selectorClosedCallback = onSelectorClosed;
-            Instance.filter = filter;
-            Instance.Init();
-            Instance.ShowAuxWindow();
+            s_instance._showSceneObjects = !isScriptableObject;
+            s_instance._editingProperty = property;
+            s_instance._selectionChangedCallback = onSelectionChanged;
+            s_instance._selectorClosedCallback = onSelectorClosed;
+            s_instance._filter = filter;
+            s_instance.Init();
+            s_instance.ShowAuxWindow();
         }
 
         private void Init()
@@ -162,13 +162,13 @@ namespace UniCore.Editor.AttributesDrawer
 
         private void InitData()
         {
-            undoGroup = Undo.GetCurrentGroup();
-            searchText = "";
-            allItems = new List<ItemInfo>();
-            filteredItems = new List<ItemInfo>();
+            _undoGroup = Undo.GetCurrentGroup();
+            _searchText = "";
+            _allItems = new List<ItemInfo>();
+            _filteredItems = new List<ItemInfo>();
 
-            var target = editingProperty.objectReferenceValue;
-            if (target != null) showSceneObjects = !AssetDatabase.Contains(target);
+            var target = _editingProperty.objectReferenceValue;
+            if (target != null) _showSceneObjects = !AssetDatabase.Contains(target);
 
             PopulateItems();
             FilterItems();
@@ -180,9 +180,9 @@ namespace UniCore.Editor.AttributesDrawer
 
             rootVisualElement.styleSheets.Add(styleSheet);
 
-            searchBox = new ToolbarSearchField();
-            searchBox.RegisterValueChangedCallback(SearchFilterChanged);
-            rootVisualElement.Add(searchBox);
+            _searchBox = new ToolbarSearchField();
+            _searchBox.RegisterValueChangedCallback(SearchFilterChanged);
+            rootVisualElement.Add(_searchBox);
 
             var tabContainer = new VisualElement
             {
@@ -191,56 +191,56 @@ namespace UniCore.Editor.AttributesDrawer
                     flexDirection = FlexDirection.Row
                 }
             };
-            assetsTab = new Tab("Assets");
-            sceneTab = new Tab("Scene");
-            tabContainer.Add(assetsTab);
-            tabContainer.Add(sceneTab);
+            _assetsTab = new Tab("Assets");
+            _sceneTab = new Tab("Scene");
+            tabContainer.Add(_assetsTab);
+            tabContainer.Add(_sceneTab);
             rootVisualElement.Add(tabContainer);
 
-            listView = new ListView(filteredItems, 16, MakeItem, BindItem);
-            listView.selectionChanged += ItemSelectionChanged;
-            listView.itemsChosen += ItemsChosen;
-            rootVisualElement.Add(listView);
+            _listView = new ListView(_filteredItems, 16, MakeItem, BindItem);
+            _listView.selectionChanged += ItemSelectionChanged;
+            _listView.itemsChosen += ItemsChosen;
+            rootVisualElement.Add(_listView);
 
-            detailsLabel = new Label();
-            detailsTypeLabel = new Label();
-            detailsIndexLabel = new Label();
+            _detailsLabel = new Label();
+            _detailsTypeLabel = new Label();
+            _detailsIndexLabel = new Label();
 
             var details = new VisualElement();
             details.AddToClassList("details");
-            details.Add(detailsLabel);
-            details.Add(detailsIndexLabel);
-            details.Add(detailsTypeLabel);
+            details.Add(_detailsLabel);
+            details.Add(_detailsIndexLabel);
+            details.Add(_detailsTypeLabel);
             rootVisualElement.Add(details);
         }
 
         private void BindVisualElements()
         {
-            var activeTab = showSceneObjects ? sceneTab : assetsTab;
+            var activeTab = _showSceneObjects ? _sceneTab : _assetsTab;
             activeTab.SetValueWithoutNotify(true);
 
             var toggleGroup = new ToggleGroup();
-            toggleGroup.RegisterToggle(assetsTab);
-            toggleGroup.RegisterToggle(sceneTab);
+            toggleGroup.RegisterToggle(_assetsTab);
+            toggleGroup.RegisterToggle(_sceneTab);
             toggleGroup.OnToggleChanged += HandleGroupChanged;
 
             if (GetIndexOfEditingPropertyValue(out var index))
-                listView.selectedIndex = index;
+                _listView.selectedIndex = index;
         }
 
         private void FinishInit()
         {
-            EditorApplication.delayCall += () => { listView.Focus(); };
+            EditorApplication.delayCall += () => { _listView.Focus(); };
         }
 
         private bool GetIndexOfEditingPropertyValue(out int index)
         {
             index = -1;
-            var targetObject = editingProperty.objectReferenceValue;
+            var targetObject = _editingProperty.objectReferenceValue;
             if (targetObject)
             {
                 var instanceID = targetObject.GetInstanceID();
-                index = filteredItems.FindIndex(x => x.InstanceID == instanceID);
+                index = _filteredItems.FindIndex(x => x.InstanceID == instanceID);
             }
 
             return index >= 0;
@@ -249,39 +249,39 @@ namespace UniCore.Editor.AttributesDrawer
         private bool GetIndexOfCurrentItem(out int index)
         {
             index = -1;
-            if (currentItem != null)
-                index = filteredItems.FindIndex(0, x => x.InstanceID == currentItem.InstanceID);
+            if (_currentItem != null)
+                index = _filteredItems.FindIndex(0, x => x.InstanceID == _currentItem.InstanceID);
             return index >= 0;
         }
 
         private void HandleGroupChanged(object sender, Toggle toggle)
         {
-            if (showSceneObjects && toggle == this.sceneTab) return;
-            showSceneObjects = !showSceneObjects;
+            if (_showSceneObjects && toggle == this._sceneTab) return;
+            _showSceneObjects = !_showSceneObjects;
             PopulateItems();
             FilterItems();
             var list = new List<int>();
             if (GetIndexOfCurrentItem(out var index)) list.Add(index);
-            listView.SetSelectionWithoutNotify(list);
-            listView.Focus();
+            _listView.SetSelectionWithoutNotify(list);
+            _listView.Focus();
         }
 
         private void OnDisable()
         {
-            selectorClosedCallback?.Invoke(GetCurrentObject(), userCanceled);
-            if (userCanceled)
-                Undo.RevertAllDownToGroup(undoGroup);
+            _selectorClosedCallback?.Invoke(GetCurrentObject(), _userCanceled);
+            if (_userCanceled)
+                Undo.RevertAllDownToGroup(_undoGroup);
             else
-                Undo.CollapseUndoOperations(undoGroup);
-            Instance = null;
+                Undo.CollapseUndoOperations(_undoGroup);
+            s_instance = null;
         }
 
         private void PopulateItems()
         {
-            allItems.Clear();
-            filteredItems.Clear();
-            allItems.AddRange(showSceneObjects ? FetchAllComponents() : FetchAllAssets());
-            allItems.Sort((item, other) => string.Compare(item.Label, other.Label, StringComparison.Ordinal));
+            _allItems.Clear();
+            _filteredItems.Clear();
+            _allItems.AddRange(_showSceneObjects ? FetchAllComponents() : FetchAllAssets());
+            _allItems.Sort((item, other) => string.Compare(item.Label, other.Label, StringComparison.Ordinal));
         }
 
         private void SearchFilterChanged(ChangeEvent<string> evt)
@@ -291,24 +291,24 @@ namespace UniCore.Editor.AttributesDrawer
 
         private void FilterItems()
         {
-            filteredItems.Clear();
-            filteredItems.Add(nullItem);
-            filteredItems.AddRange(allItems.Where(item =>
+            _filteredItems.Clear();
+            _filteredItems.Add(s_nullItem);
+            _filteredItems.AddRange(_allItems.Where(item =>
                 string.IsNullOrEmpty(SearchText) || item.Label.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0));
 
-            listView?.Rebuild();
+            _listView?.Rebuild();
         }
 
         private void BindItem(VisualElement listItem, int index)
         {
-            if (index < 0 || index >= filteredItems.Count)
+            if (index < 0 || index >= _filteredItems.Count)
                 return;
 
             var label = listItem.Q<Label>();
             if (label != null)
-                label.text = filteredItems[index].Label;
+                label.text = _filteredItems[index].Label;
             var image = listItem.Q<Image>();
-            image.image = filteredItems[index].Icon;
+            image.image = _filteredItems[index].Icon;
         }
 
         private static VisualElement MakeItem()
@@ -328,30 +328,30 @@ namespace UniCore.Editor.AttributesDrawer
 
         private void ItemSelectionChanged(IEnumerable<object> selectedItems)
         {
-            currentItem = selectedItems.FirstOrDefault() as ItemInfo;
+            _currentItem = selectedItems.FirstOrDefault() as ItemInfo;
             UpdateDetails();
-            selectionChangedCallback?.Invoke(GetCurrentObject());
+            _selectionChangedCallback?.Invoke(GetCurrentObject());
         }
 
         private void ItemsChosen(IEnumerable<object> selectedItems)
         {
-            currentItem = selectedItems.FirstOrDefault() as ItemInfo;
-            userCanceled = false;
+            _currentItem = selectedItems.FirstOrDefault() as ItemInfo;
+            _userCanceled = false;
             Close();
         }
 
         private void UpdateDetails()
         {
-            GetText(currentItem, out var infoText, out var indexText, out var typeText);
+            GetText(_currentItem, out var infoText, out var indexText, out var typeText);
 
             void SetText(Label label, string text)
             {
                 label.text = String.IsNullOrEmpty(text) ? "" : text;
             }
 
-            SetText(detailsLabel, infoText);
-            SetText(detailsIndexLabel, indexText);
-            SetText(detailsTypeLabel, typeText);
+            SetText(_detailsLabel, infoText);
+            SetText(_detailsIndexLabel, indexText);
+            SetText(_detailsTypeLabel, typeText);
         }
 
         private static void GetText(ItemInfo itemInfo, out string text, out string indexText, out string typeText)
@@ -402,7 +402,7 @@ namespace UniCore.Editor.AttributesDrawer
         private IEnumerable<ItemInfo> FetchAllAssets()
         {
             var property = new HierarchyProperty(HierarchyType.Assets, false);
-            property.SetSearchFilter(filter.AssetSearchFilter, 0);
+            property.SetSearchFilter(_filter.AssetSearchFilter, 0);
 
             while (property.Next(null))
             {
@@ -433,14 +433,14 @@ namespace UniCore.Editor.AttributesDrawer
 
         private bool CheckFilter(Object obj)
         {
-            var matchFilterConstraint = filter.SceneFilterCallback?.Invoke(obj);
+            var matchFilterConstraint = _filter.SceneFilterCallback?.Invoke(obj);
             return (!matchFilterConstraint.HasValue || matchFilterConstraint.Value);
         }
 
         private Object GetCurrentObject()
         {
-            if (currentItem == null || currentItem.InstanceID == null) return null;
-            return EditorUtility.InstanceIDToObject((int)currentItem.InstanceID);
+            if (_currentItem == null || _currentItem.InstanceID == null) return null;
+            return EditorUtility.InstanceIDToObject((int)_currentItem.InstanceID);
         }
     }
 

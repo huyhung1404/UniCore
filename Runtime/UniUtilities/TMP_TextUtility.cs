@@ -4,9 +4,9 @@ namespace TMPro
 {
     public static class TMP_TextUtility
     {
-        private static readonly char[] arr = new char[64];
+        private static readonly char[] s_arr = new char[64];
 
-        private static int charIndex;
+        private static int s_charIndex;
 
         public static void SetText(this TMP_Text text, sbyte number)
         {
@@ -53,8 +53,8 @@ namespace TMPro
             SetInteger(number);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, int number, string prefix, string postfix)
@@ -64,8 +64,8 @@ namespace TMPro
             AddStringToArray(prefix);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, uint number)
@@ -73,8 +73,8 @@ namespace TMPro
             SetInteger(number);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, uint number, string prefix, string postfix)
@@ -84,8 +84,8 @@ namespace TMPro
             AddStringToArray(prefix);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, long number)
@@ -93,8 +93,8 @@ namespace TMPro
             SetInteger(number);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, long number, string prefix, string postfix)
@@ -104,8 +104,8 @@ namespace TMPro
             AddStringToArray(prefix);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, ulong number)
@@ -113,8 +113,8 @@ namespace TMPro
             SetInteger(number);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, ulong number, string prefix, string postfix)
@@ -124,8 +124,8 @@ namespace TMPro
             AddStringToArray(prefix);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, float number, int precision = 2)
@@ -133,8 +133,8 @@ namespace TMPro
             SetFloat(number, precision);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, float number, string prefix, string postfix, int precision = 2)
@@ -144,8 +144,8 @@ namespace TMPro
             AddStringToArray(prefix);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, double number, int precision = 2)
@@ -153,8 +153,8 @@ namespace TMPro
             SetFloat(number, precision);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         public static void SetText(this TMP_Text text, double number, string prefix, string postfix, int precision = 2)
@@ -164,15 +164,15 @@ namespace TMPro
             AddStringToArray(prefix);
 
             ReverseArray();
-            text.SetCharArray(arr, 0, charIndex);
-            charIndex = 0;
+            text.SetCharArray(s_arr, 0, s_charIndex);
+            s_charIndex = 0;
         }
 
         private static void SetInteger(int number)
         {
             var isNegativeNumber = number < 0;
             if (number == 0)
-                arr[charIndex++] = '0';
+                s_arr[s_charIndex++] = '0';
             else
             {
                 if (isNegativeNumber)
@@ -180,24 +180,24 @@ namespace TMPro
 
                 while (number > 0)
                 {
-                    arr[charIndex++] = (char)('0' + number % 10);
+                    s_arr[s_charIndex++] = (char)('0' + number % 10);
                     number /= 10;
                 }
 
                 if (isNegativeNumber)
-                    arr[charIndex++] = '-';
+                    s_arr[s_charIndex++] = '-';
             }
         }
 
         private static void SetInteger(uint number)
         {
             if (number == 0)
-                arr[charIndex++] = '0';
+                s_arr[s_charIndex++] = '0';
             else
             {
                 while (number > 0)
                 {
-                    arr[charIndex++] = (char)('0' + (number % 10));
+                    s_arr[s_charIndex++] = (char)('0' + (number % 10));
                     number /= 10;
                 }
             }
@@ -206,7 +206,7 @@ namespace TMPro
         private static void SetInteger(long number)
         {
             if (number == 0)
-                arr[charIndex++] = '0';
+                s_arr[s_charIndex++] = '0';
             else
             {
                 var isNegativeNumber = number < 0;
@@ -215,24 +215,24 @@ namespace TMPro
 
                 while (number > 0)
                 {
-                    arr[charIndex++] = (char)('0' + (number % 10));
+                    s_arr[s_charIndex++] = (char)('0' + (number % 10));
                     number /= 10;
                 }
 
                 if (isNegativeNumber)
-                    arr[charIndex++] = '-';
+                    s_arr[s_charIndex++] = '-';
             }
         }
 
         private static void SetInteger(ulong number)
         {
             if (number == 0)
-                arr[charIndex++] = '0';
+                s_arr[s_charIndex++] = '0';
             else
             {
                 while (number > 0)
                 {
-                    arr[charIndex++] = (char)('0' + (number % 10));
+                    s_arr[s_charIndex++] = (char)('0' + (number % 10));
                     number /= 10;
                 }
             }
@@ -250,7 +250,7 @@ namespace TMPro
 		fraction = (float) System.Math.Round( fraction, precision );
 #endif
 
-            charIndex += precision;
+            s_charIndex += precision;
             var truncateAmount = 0;
             for (var i = 0; i < precision; i++)
             {
@@ -275,7 +275,7 @@ namespace TMPro
                     truncateAmount = 0;
                 }
 
-                arr[--charIndex] = (char)('0' + digit);
+                s_arr[--s_charIndex] = (char)('0' + digit);
                 fraction -= digit;
             }
 
@@ -286,12 +286,12 @@ namespace TMPro
                 if (truncateAmount > 0)
                 {
                     // Truncate redundant 0's
-                    for (int i = charIndex + truncateAmount, j = i + precision; i < j; i++)
-                        arr[i - truncateAmount] = arr[i];
+                    for (int i = s_charIndex + truncateAmount, j = i + precision; i < j; i++)
+                        s_arr[i - truncateAmount] = s_arr[i];
                 }
 
-                charIndex += precision - truncateAmount;
-                arr[charIndex++] = '.';
+                s_charIndex += precision - truncateAmount;
+                s_arr[s_charIndex++] = '.';
             }
             else if (integer == 0) // Rare case: -0.0001 with precision 2 results in -0, this line fixes it
                 isNegativeNumber = false;
@@ -299,7 +299,7 @@ namespace TMPro
             SetInteger(integer);
 
             if (isNegativeNumber)
-                arr[charIndex++] = '-';
+                s_arr[s_charIndex++] = '-';
         }
 
         private static void SetFloat(double number, int precision)
@@ -315,7 +315,7 @@ namespace TMPro
 		fraction = System.Math.Round( fraction, precision );
 #endif
 
-            charIndex += precision;
+            s_charIndex += precision;
             var truncateAmount = 0;
             for (var i = 0; i < precision; i++)
             {
@@ -340,7 +340,7 @@ namespace TMPro
                     truncateAmount = 0;
                 }
 
-                arr[--charIndex] = (char)('0' + digit);
+                s_arr[--s_charIndex] = (char)('0' + digit);
                 fraction -= digit;
             }
 
@@ -351,12 +351,12 @@ namespace TMPro
                 if (truncateAmount > 0)
                 {
                     // Truncate redundant 0's
-                    for (int i = charIndex + truncateAmount, j = i + precision; i < j; i++)
-                        arr[i - truncateAmount] = arr[i];
+                    for (int i = s_charIndex + truncateAmount, j = i + precision; i < j; i++)
+                        s_arr[i - truncateAmount] = s_arr[i];
                 }
 
-                charIndex += precision - truncateAmount;
-                arr[charIndex++] = '.';
+                s_charIndex += precision - truncateAmount;
+                s_arr[s_charIndex++] = '.';
             }
             else if (integer == 0) // Rare case: -0.0001 with precision 2 results in -0, this line fixes it
                 isNegativeNumber = false;
@@ -364,7 +364,7 @@ namespace TMPro
             SetInteger(integer);
 
             if (isNegativeNumber)
-                arr[charIndex++] = '-';
+                s_arr[s_charIndex++] = '-';
         }
 
         private static void AddStringToArray(string str)
@@ -372,15 +372,15 @@ namespace TMPro
             if (string.IsNullOrEmpty(str)) return;
 
             for (var i = str.Length - 1; i >= 0; i--)
-                arr[charIndex++] = str[i];
+                s_arr[s_charIndex++] = str[i];
         }
 
         private static void ReverseArray()
         {
-            for (var i = charIndex / 2 - 1; i >= 0; i--)
+            for (var i = s_charIndex / 2 - 1; i >= 0; i--)
             {
-                var j = charIndex - 1 - i;
-                (arr[i], arr[j]) = (arr[j], arr[i]);
+                var j = s_charIndex - 1 - i;
+                (s_arr[i], s_arr[j]) = (s_arr[j], s_arr[i]);
             }
         }
     }

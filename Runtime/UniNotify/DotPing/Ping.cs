@@ -6,21 +6,21 @@ namespace UniCore.Notify.DotPing
 {
     public class Ping : MonoBehaviour
     {
-        [SerializeField] internal GraphicType graphicType;
-        [SerializeField] protected string locationId;
-        private PingGraphic pingGraphic;
+        [SerializeField] internal GraphicType m_graphicType;
+        [SerializeField] protected string m_locationId;
+        private PingGraphic _pingGraphic;
 
         public void ChangeLocationId(string value)
         {
-            if (CompareSpan(value.AsSpan(), locationId.AsSpan())) return;
-            locationId = value;
-            OnValueChange(PingSystem.IsActive(locationId));
+            if (CompareSpan(value.AsSpan(), m_locationId.AsSpan())) return;
+            m_locationId = value;
+            OnValueChange(PingSystem.IsActive(m_locationId));
         }
 
         private void OnEnable()
         {
             PingSystem.OnPingChanged += HandlePingChange;
-            OnValueChange(PingSystem.IsActive(locationId));
+            OnValueChange(PingSystem.IsActive(m_locationId));
         }
 
         private void OnDisable()
@@ -30,21 +30,21 @@ namespace UniCore.Notify.DotPing
 
         private void HandlePingChange(string id, bool isActive)
         {
-            if (CompareSpan(id.AsSpan(), locationId.AsSpan())) OnValueChange(isActive);
+            if (CompareSpan(id.AsSpan(), m_locationId.AsSpan())) OnValueChange(isActive);
         }
 
         internal void OnValueChange(bool isActive)
         {
-            if (ReferenceEquals(pingGraphic, null))
+            if (ReferenceEquals(_pingGraphic, null))
             {
                 if (!isActive) return;
-                pingGraphic = PingGraphic.GetOrCreate(graphicType, transform);
+                _pingGraphic = PingGraphic.GetOrCreate(m_graphicType, transform);
                 return;
             }
 
             if (isActive) return;
-            pingGraphic.ReturnToPool();
-            pingGraphic = null;
+            _pingGraphic.ReturnToPool();
+            _pingGraphic = null;
         }
 
         private static bool CompareSpan(ReadOnlySpan<char> a, ReadOnlySpan<char> b)

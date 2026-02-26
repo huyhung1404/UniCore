@@ -4,14 +4,14 @@ namespace UniCore.Utilities.Pooling
 {
     public class InterfacePolicy<T> : PoolPolicy<T>
     {
-        private readonly Func<T> factory;
+        private readonly Func<T> _factory;
 
         public InterfacePolicy(Func<T> factory)
         {
-            this.factory = factory;
+            _factory = factory;
         }
 
-        public override T Create() => factory();
+        public override T Create() => _factory();
 
         public override void OnGet(T obj)
         {

@@ -8,16 +8,16 @@ namespace UniCore.Editor
 {
     public class SignalSendPopup : EditorWindow
     {
-        private Type signalType;
-        private object signalInstance;
-        private SignalScope scope = SignalScope.All;
-        private int fieldCount;
+        private Type _signalType;
+        private object _signalInstance;
+        private SignalScope _scope = SignalScope.All;
+        private int _fieldCount;
 
         public static void Open(Type signalType)
         {
             var window = CreateInstance<SignalSendPopup>();
-            window.signalType = signalType;
-            window.signalInstance = Activator.CreateInstance(signalType);
+            window._signalType = signalType;
+            window._signalInstance = Activator.CreateInstance(signalType);
             window.titleContent = new GUIContent($"Send {signalType.Name}");
             window.CalculateFieldCount();
             window.FitSizeToContent();
@@ -28,21 +28,21 @@ namespace UniCore.Editor
         {
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
 
-            fieldCount = 0;
+            _fieldCount = 0;
 
-            foreach (var field in signalType.GetFields(flags))
+            foreach (var field in _signalType.GetFields(flags))
             {
                 if (!field.IsInitOnly)
-                    fieldCount++;
+                    _fieldCount++;
             }
 
-            foreach (var prop in signalType.GetProperties(flags))
+            foreach (var prop in _signalType.GetProperties(flags))
             {
                 if (prop.CanWrite && prop.GetIndexParameters().Length == 0)
-                    fieldCount++;
+                    _fieldCount++;
             }
 
-            fieldCount += 1;
+            _fieldCount += 1;
         }
 
         private void FitSizeToContent()
@@ -52,14 +52,14 @@ namespace UniCore.Editor
             
             var height = line * 1.5f + spacing * 4f;
             
-            height += fieldCount * (line + spacing);
+            height += _fieldCount * (line + spacing);
             height += line * 2f;
             
             height += 12f;
 
             const float width = 360f;
             
-            if (fieldCount > 12)
+            if (_fieldCount > 12)
             {
                 minSize = new Vector2(width, 400);
                 maxSize = new Vector2(width, 600);
@@ -90,27 +90,27 @@ namespace UniCore.Editor
 
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
 
-            foreach (var field in signalType.GetFields(flags))
+            foreach (var field in _signalType.GetFields(flags))
             {
                 if (field.IsInitOnly) continue;
 
-                var value = field.GetValue(signalInstance);
+                var value = field.GetValue(_signalInstance);
                 var newValue = DrawValue(field.FieldType, field.Name, value);
 
                 if (!Equals(value, newValue))
-                    field.SetValue(signalInstance, newValue);
+                    field.SetValue(_signalInstance, newValue);
             }
 
-            foreach (var prop in signalType.GetProperties(flags))
+            foreach (var prop in _signalType.GetProperties(flags))
             {
                 if (!prop.CanWrite || prop.GetIndexParameters().Length > 0)
                     continue;
 
-                var value = prop.GetValue(signalInstance);
+                var value = prop.GetValue(_signalInstance);
                 var newValue = DrawValue(prop.PropertyType, prop.Name, value);
 
                 if (!Equals(value, newValue))
-                    prop.SetValue(signalInstance, newValue);
+                    prop.SetValue(_signalInstance, newValue);
             }
 
             EditorGUILayout.EndVertical();
@@ -130,7 +130,7 @@ namespace UniCore.Editor
             EditorGUILayout.BeginVertical("box");
 
             var entries = SignalScopeRegistry.scopeNames;
-            var currentMask = scope.Mask;
+            var currentMask = _scope.Mask;
 
             foreach (var kvp in entries)
             {
@@ -170,18 +170,18 @@ namespace UniCore.Editor
                 }
             }
 
-            scope = currentMask == 0 ? new SignalScope(0) : new SignalScope(currentMask);
-            EditorGUILayout.HelpBox($"Selected: {SignalScopeRegistry.GetReadableScope(scope)}", MessageType.Info);
+            _scope = currentMask == 0 ? new SignalScope(0) : new SignalScope(currentMask);
+            EditorGUILayout.HelpBox($"Selected: {SignalScopeRegistry.GetReadableScope(_scope)}", MessageType.Info);
             EditorGUILayout.EndVertical();
         }
 
         private void Send()
         {
             var method = typeof(SignalSystem)
-                .GetMethod("Dispatch", new[] { signalType, typeof(SignalScope) })
-                ?.MakeGenericMethod(signalType);
+                .GetMethod("Dispatch", new[] { _signalType, typeof(SignalScope) })
+                ?.MakeGenericMethod(_signalType);
 
-            method?.Invoke(null, new[] { signalInstance, scope });
+            method?.Invoke(null, new[] { _signalInstance, _scope });
         }
     }
 }

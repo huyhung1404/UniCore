@@ -4,18 +4,18 @@ namespace UniCore.Utilities.Pooling
 {
     public class UnityObjectPolicy<T> : PoolPolicy<T> where T : Component
     {
-        private readonly T prefab;
-        private readonly Transform root;
+        private readonly T _prefab;
+        private readonly Transform _root;
 
         public UnityObjectPolicy(T prefab, Transform root = null)
         {
-            this.prefab = prefab;
-            this.root = root;
+            this._prefab = prefab;
+            this._root = root;
         }
 
         public override T Create()
         {
-            var obj = Object.Instantiate(prefab, root);
+            var obj = Object.Instantiate(_prefab, _root);
             obj.gameObject.SetActive(false);
             return obj;
         }

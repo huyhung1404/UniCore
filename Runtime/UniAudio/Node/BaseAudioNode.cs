@@ -12,7 +12,7 @@ namespace UniCore.Audio.Node
     [System.Serializable]
     public class AudioClipReference : AssetReferenceT<AudioClip>
     {
-        private AsyncOperationHandle<AudioClip>? handle;
+        private AsyncOperationHandle<AudioClip>? _handle;
 
         public AudioClipReference(string guid) : base(guid)
         {
@@ -29,12 +29,12 @@ namespace UniCore.Audio.Node
 
         public async UniTask<AudioClip> LoadAsync()
         {
-            if (!handle.HasValue || !handle.Value.IsValid())
+            if (!_handle.HasValue || !_handle.Value.IsValid())
             {
-                handle = Addressables.LoadAssetAsync<AudioClip>(this);
+                _handle = Addressables.LoadAssetAsync<AudioClip>(this);
             }
 
-            var op = handle.Value;
+            var op = _handle.Value;
 
             if (!op.IsDone) await op.Task;
 
@@ -46,13 +46,13 @@ namespace UniCore.Audio.Node
 
         public void Release()
         {
-            if (handle.HasValue && handle.Value.IsValid())
+            if (_handle.HasValue && _handle.Value.IsValid())
             {
-                Addressables.Release(handle.Value);
+                Addressables.Release(_handle.Value);
                 return;
             }
 
-            handle = null;
+            _handle = null;
         }
     }
 

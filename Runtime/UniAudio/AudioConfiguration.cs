@@ -6,23 +6,23 @@ namespace UniCore.Audio
     [CreateAssetMenu(menuName = "UniCore/Audio/Configuration")]
     public class AudioConfiguration : ScriptableObject
     {
-        public AudioMixerGroup output;
-        public bool mute;
-        public bool bypassEffects;
-        public bool bypassListenerEffects;
-        public bool bypassReverbZones;
+        public AudioMixerGroup Output;
+        public bool Mute;
+        public bool BypassEffects;
+        public bool BypassListenerEffects;
+        public bool BypassReverbZones;
 
-        public int priority;
-        public float volume = 1f;
-        public float pitch = 1f;
-        public float stereoPan;
-        public float spatialBlend = 1f;
-        public float reverbZoneMix = 1f;
+        public int Priority;
+        public float Volume = 1f;
+        public float Pitch = 1f;
+        public float StereoPan;
+        public float SpatialBlend = 1f;
+        public float ReverbZoneMix = 1f;
 
-        public float dopplerLevel = 1f;
-        public int spread;
-        public AudioRolloffMode volumeRolloff = AudioRolloffMode.Logarithmic;
-        public float minDistance = 0.1f;
-        public float maxDistance = 50f;
+        public float DopplerLevel = 1f;
+        public int Spread;
+        public AudioRolloffMode VolumeRolloff = AudioRolloffMode.Logarithmic;
+        public float MinDistance = 0.1f;
+        public float MaxDistance = 50f;
     }
 }

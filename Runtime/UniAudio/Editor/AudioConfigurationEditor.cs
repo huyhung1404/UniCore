@@ -7,30 +7,30 @@ namespace UniCore.Editor.Audio
     [CustomEditor(typeof(AudioConfiguration))]
     public class AudioConfigurationEditor : UnityEditor.Editor
     {
-        private SerializedProperty output, mute, bypassEffects, bypassListenerEffects, bypassReverbZones;
-        private SerializedProperty priority, volume, pitch, stereoPan, spatialBlend, reverbZoneMix;
-        private SerializedProperty dopplerLevel, spread, volumeRolloff, minDistance, maxDistance;
+        private SerializedProperty _output, _mute, _bypassEffects, _bypassListenerEffects, _bypassReverbZones;
+        private SerializedProperty _priority, _volume, _pitch, _stereoPan, _spatialBlend, _reverbZoneMix;
+        private SerializedProperty _dopplerLevel, _spread, _volumeRolloff, _minDistance, _maxDistance;
 
-        private bool show3D = true;
+        private bool _show3D = true;
 
         private void OnEnable()
         {
-            output = serializedObject.FindProperty("output");
-            mute = serializedObject.FindProperty("mute");
-            bypassEffects = serializedObject.FindProperty("bypassEffects");
-            bypassListenerEffects = serializedObject.FindProperty("bypassListenerEffects");
-            bypassReverbZones = serializedObject.FindProperty("bypassReverbZones");
-            priority = serializedObject.FindProperty("priority");
-            volume = serializedObject.FindProperty("volume");
-            pitch = serializedObject.FindProperty("pitch");
-            stereoPan = serializedObject.FindProperty("stereoPan");
-            spatialBlend = serializedObject.FindProperty("spatialBlend");
-            reverbZoneMix = serializedObject.FindProperty("reverbZoneMix");
-            dopplerLevel = serializedObject.FindProperty("dopplerLevel");
-            spread = serializedObject.FindProperty("spread");
-            volumeRolloff = serializedObject.FindProperty("volumeRolloff");
-            minDistance = serializedObject.FindProperty("minDistance");
-            maxDistance = serializedObject.FindProperty("maxDistance");
+            _output = serializedObject.FindProperty("Output");
+            _mute = serializedObject.FindProperty("Mute");
+            _bypassEffects = serializedObject.FindProperty("BypassEffects");
+            _bypassListenerEffects = serializedObject.FindProperty("BypassListenerEffects");
+            _bypassReverbZones = serializedObject.FindProperty("BypassReverbZones");
+            _priority = serializedObject.FindProperty("Priority");
+            _volume = serializedObject.FindProperty("Volume");
+            _pitch = serializedObject.FindProperty("Pitch");
+            _stereoPan = serializedObject.FindProperty("StereoPan");
+            _spatialBlend = serializedObject.FindProperty("SpatialBlend");
+            _reverbZoneMix = serializedObject.FindProperty("ReverbZoneMix");
+            _dopplerLevel = serializedObject.FindProperty("DopplerLevel");
+            _spread = serializedObject.FindProperty("Spread");
+            _volumeRolloff = serializedObject.FindProperty("VolumeRolloff");
+            _minDistance = serializedObject.FindProperty("MinDistance");
+            _maxDistance = serializedObject.FindProperty("MaxDistance");
         }
 
         public override void OnInspectorGUI()
@@ -46,29 +46,29 @@ namespace UniCore.Editor.Audio
 
         private void DrawHeaderBlock()
         {
-            EditorGUILayout.PropertyField(output);
-            EditorGUILayout.PropertyField(mute);
-            EditorGUILayout.PropertyField(bypassEffects);
-            EditorGUILayout.PropertyField(bypassListenerEffects);
-            EditorGUILayout.PropertyField(bypassReverbZones);
+            EditorGUILayout.PropertyField(_output);
+            EditorGUILayout.PropertyField(_mute);
+            EditorGUILayout.PropertyField(_bypassEffects);
+            EditorGUILayout.PropertyField(_bypassListenerEffects);
+            EditorGUILayout.PropertyField(_bypassReverbZones);
         }
 
         private void DrawVolumeBlock()
         {
             DrawPrioritySlider();
-            EditorGUILayout.Slider(volume, 0, 1, "Volume");
+            EditorGUILayout.Slider(_volume, 0, 1, "Volume");
             EditorGUILayout.Space(10);
-            EditorGUILayout.Slider(pitch, -3, 3, "Pitch");
-            DrawSlider("Stereo Pan", stereoPan, -1, 1, "Left", "Right");
-            DrawSlider("Spatial Blend", spatialBlend, 0, 1, "2D", "3D");
-            EditorGUILayout.Slider(reverbZoneMix, 0, 1.1f, "Reverb Zone Mix");
+            EditorGUILayout.Slider(_pitch, -3, 3, "Pitch");
+            DrawSlider("Stereo Pan", _stereoPan, -1, 1, "Left", "Right");
+            DrawSlider("Spatial Blend", _spatialBlend, 0, 1, "2D", "3D");
+            EditorGUILayout.Slider(_reverbZoneMix, 0, 1.1f, "Reverb Zone Mix");
         }
 
         private void DrawPrioritySlider()
         {
             var rect = EditorGUILayout.GetControlRect();
 
-            EditorGUI.IntSlider(rect, priority, 0, 256, new GUIContent("Priority"));
+            EditorGUI.IntSlider(rect, _priority, 0, 256, new GUIContent("Priority"));
 
             var labelRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight * 0.6f);
             labelRect.y -= 2;
@@ -98,16 +98,16 @@ namespace UniCore.Editor.Audio
 
         private void DrawSpatialBlock()
         {
-            show3D = EditorGUILayout.Foldout(show3D, "3D Sound Settings", true);
-            if (!show3D) return;
+            _show3D = EditorGUILayout.Foldout(_show3D, "3D Sound Settings", true);
+            if (!_show3D) return;
 
             EditorGUI.indentLevel++;
 
-            EditorGUILayout.Slider(dopplerLevel, 0, 5);
-            EditorGUILayout.IntSlider(spread, 0, 360);
-            EditorGUILayout.PropertyField(volumeRolloff);
-            EditorGUILayout.PropertyField(minDistance);
-            EditorGUILayout.PropertyField(maxDistance);
+            EditorGUILayout.Slider(_dopplerLevel, 0, 5);
+            EditorGUILayout.IntSlider(_spread, 0, 360);
+            EditorGUILayout.PropertyField(_volumeRolloff);
+            EditorGUILayout.PropertyField(_minDistance);
+            EditorGUILayout.PropertyField(_maxDistance);
 
             EditorGUI.indentLevel--;
         }

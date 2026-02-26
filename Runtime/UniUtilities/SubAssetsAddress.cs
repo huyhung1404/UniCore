@@ -12,21 +12,21 @@ namespace UniCore.Utilities
 
         public SubAssetsAddress(params string[] subs)
         {
-            this.subs = subs;
+            Subs = subs;
         }
 
-        [SerializeField] private string[] subs;
+        [SerializeField] private string[] Subs;
 
-        public int Length() => subs.Length;
+        public int Length() => Subs.Length;
 
         public string this[int index]
         {
             get
             {
-                if (subs == null || index < 0 || index >= subs.Length)
+                if (Subs == null || index < 0 || index >= Subs.Length)
                     return null;
 
-                return subs[index];
+                return Subs[index];
             }
         }
     }

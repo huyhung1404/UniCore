@@ -8,12 +8,12 @@ namespace UniCore.Audio.Node
     [CreateAssetMenu(menuName = "UniCore/Audio/Node/Single")]
     public class SingleAudioNode : BaseAudioNode
     {
-        [SerializeField] private AudioClipReference reference;
+        [SerializeField] private AudioClipReference _reference;
 
         public override async UniTask<ClipData> GetClipData()
         {
             var data = ClipDataPool.Pop();
-            data.clips.Add(await reference.LoadAsync());
+            data.Clips.Add(await _reference.LoadAsync());
             return data;
         }
     }

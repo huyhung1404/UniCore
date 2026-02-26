@@ -8,34 +8,34 @@ namespace UniCore.Editor.QuickAccess
     {
         public static void RegisterUse(string guid)
         {
-            var stat = QuickAccessStorage.Database().stats.FirstOrDefault(s => s.guid == guid);
+            var stat = QuickAccessStorage.Database().Stats.FirstOrDefault(s => s.GUID == guid);
             if (stat == null)
             {
-                stat = new FavoriteStat { guid = guid };
-                QuickAccessStorage.Database().stats.Add(stat);
+                stat = new FavoriteStat { GUID = guid };
+                QuickAccessStorage.Database().Stats.Add(stat);
             }
 
-            stat.score++;
-            stat.lastUseTicks = DateTime.Now.Ticks;
+            stat.Score++;
+            stat.LastUseTicks = DateTime.Now.Ticks;
 
-            QuickAccessStorage.Database().stats.RemoveAll(s => string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(s.guid)));
+            QuickAccessStorage.Database().Stats.RemoveAll(s => string.IsNullOrEmpty(AssetDatabase.GUIDToAssetPath(s.GUID)));
 
             QuickAccessStorage.Save(QuickAccessStorage.Database());
         }
 
         public static string[] GetFavorites()
         {
-            return QuickAccessStorage.Database().stats
+            return QuickAccessStorage.Database().Stats
                 .OrderByDescending(GetWeight)
-                .Take(QuickAccessStorage.Database().favoriteLimit)
-                .Select(s => s.guid)
+                .Take(QuickAccessStorage.Database().FavoriteLimit)
+                .Select(s => s.GUID)
                 .ToArray();
         }
 
         private static double GetWeight(FavoriteStat s)
         {
-            var days = (DateTime.Now - new DateTime(s.lastUseTicks)).TotalDays;
-            return s.score * Math.Exp(-days * 0.15);
+            var days = (DateTime.Now - new DateTime(s.LastUseTicks)).TotalDays;
+            return s.Score * Math.Exp(-days * 0.15);
         }
     }
 }

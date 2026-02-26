@@ -14,41 +14,41 @@ namespace UniCore.Signal
 
     internal sealed class ListenerList<T> : IListenerList where T : ISignalEvent
     {
-        private readonly List<ISignalListener<T>> list = new(8);
+        private readonly List<ISignalListener<T>> _list = new(8);
 
-        public int Count => list.Count;
+        public int Count => _list.Count;
 
         public object Get(int index)
         {
-            return list[index];
+            return _list[index];
         }
 
         public void Add(object o)
         {
             var listener = (ISignalListener<T>)o;
-            if (list.Contains(listener)) return;
+            if (_list.Contains(listener)) return;
 
             var p = listener.Priority;
-            var i = list.Count;
-            list.Add(listener);
+            var i = _list.Count;
+            _list.Add(listener);
 
-            while (i > 0 && list[i - 1].Priority < p)
+            while (i > 0 && _list[i - 1].Priority < p)
             {
-                list[i] = list[i - 1];
+                _list[i] = _list[i - 1];
                 i--;
             }
 
-            list[i] = listener;
+            _list[i] = listener;
         }
 
-        public void Remove(object o) => list.Remove((ISignalListener<T>)o);
+        public void Remove(object o) => _list.Remove((ISignalListener<T>)o);
 
         public void Dispatch(T signal, SignalScope scope)
         {
-            var c = list.Count;
+            var c = _list.Count;
             for (var i = 0; i < c; i++)
             {
-                var listener = list[i];
+                var listener = _list[i];
                 if (!listener.ListenScope.Intersects(scope)) continue;
 
                 try
