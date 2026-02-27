@@ -26,6 +26,8 @@ namespace UniCore.Editor
         private static GUIContent s_deleteIcon;
         private static GUIContent s_sendIcon;
         private static GUIStyle s_metaStyle;
+        private static GUIContent s_editIcon;
+        private static GUIContent s_csIcon;
         private float _signalPanelRatio;
         private bool _isResizing;
 
@@ -134,6 +136,10 @@ namespace UniCore.Editor
             s_pingIcon = EditorGUIUtility.IconContent("d_Search Icon");
             s_deleteIcon = EditorGUIUtility.IconContent("TreeEditor.Trash");
             s_sendIcon = EditorGUIUtility.IconContent("d_PlayButton");
+            s_editIcon = EditorGUIUtility.IconContent("d_editicon.sml");
+            s_editIcon.tooltip = "Edit Object Data";
+            s_csIcon = EditorGUIUtility.IconContent("cs Script Icon");
+            s_csIcon.tooltip = "Pure C# Class (Non-Mono)";
         }
 
         private bool PassSignalFilter(Type signalType)
@@ -186,7 +192,7 @@ namespace UniCore.Editor
                 s_sendIcon.tooltip = "Dispatch Signal";
                 if (GUILayout.Button(s_sendIcon, EditorStyles.iconButton, GUILayout.Width(30)))
                 {
-                    SignalSendPopup.Open(signalType);
+                    SignalSendPopup.Open(signalType, GUILayoutUtility.GetLastRect());
                 }
             }
 
@@ -278,26 +284,30 @@ namespace UniCore.Editor
             {
                 GUILayout.Space(8);
 
-                s_pingIcon.tooltip = "Ping Unity Object";
-                if (GUILayout.Button(s_pingIcon, EditorStyles.iconButton, GUILayout.Width(20)))
+                var isUnityObject = SignalDebugUtil.TryGetUnityObject(listener, out var unityObj);
+
+                if (isUnityObject)
                 {
-                    if (SignalDebugUtil.TryGetUnityObject(listener, out var obj))
+                    s_pingIcon.tooltip = "Ping Unity Object";
+                    if (GUILayout.Button(s_pingIcon, EditorStyles.iconButton, GUILayout.Width(16), GUILayout.Height(16)))
                     {
-                        EditorGUIUtility.PingObject(obj);
-                        Selection.activeObject = obj;
+                        EditorGUIUtility.PingObject(unityObj);
+                        Selection.activeObject = unityObj;
                     }
                 }
+                else
+                {
+                    var oldColor = GUI.color;
+                    GUI.color = new Color(1, 1, 1, 0.4f);
+                    GUILayout.Label(s_csIcon, GUILayout.Width(16), GUILayout.Height(16));
+
+                    GUI.color = oldColor;
+                }
+
+                GUILayout.Space(4);
 
                 var headerStyle = new GUIStyle(EditorStyles.label) { richText = true, wordWrap = true };
                 EditorGUILayout.LabelField($"<b>{listenerName}</b> <color=#909090><i>({sourceText})</i></color>", headerStyle);
-
-                GUILayout.FlexibleSpace();
-
-                s_deleteIcon.tooltip = "Unregister Listener";
-                if (GUILayout.Button(s_deleteIcon, EditorStyles.iconButton, GUILayout.Width(20)))
-                {
-                    UnregisterListener(signalType, listener);
-                }
             }
 
             using (new EditorGUILayout.HorizontalScope())
@@ -309,23 +319,27 @@ namespace UniCore.Editor
                     s_metaStyle = new GUIStyle(EditorStyles.miniBoldLabel)
                     {
                         richText = true,
-                        padding = new RectOffset(0, 0, 2, 0),
+                        padding = new RectOffset(0, 0, 0, 0),
                         margin = new RectOffset(0, 0, 0, 0)
                     };
                 }
 
                 var oldColor = GUI.color;
                 GUI.color = priorityColor;
-
                 GUILayout.Label($"● Priority: {priority}", s_metaStyle, GUILayout.Width(80));
-
                 GUI.color = oldColor;
 
                 GUILayout.Space(8);
-
                 DrawListenerScope(listener, s_metaStyle);
 
+                // Đẩy nút Delete dạt ra sát lề phải của hàng thứ 2
                 GUILayout.FlexibleSpace();
+
+                s_deleteIcon.tooltip = "Unregister Listener";
+                if (GUILayout.Button(s_deleteIcon, EditorStyles.iconButton, GUILayout.Width(20)))
+                {
+                    UnregisterListener(signalType, listener);
+                }
             }
 
             GUILayout.Space(4);
@@ -482,9 +496,9 @@ namespace UniCore.Editor
 
                 GUILayout.FlexibleSpace();
 
-                if (GUILayout.Button("Edit", EditorStyles.miniButton, GUILayout.Width(40)))
+                if (GUILayout.Button(s_editIcon, EditorStyles.iconButton, GUILayout.Width(20)))
                 {
-                    ObjectEditPopup.Open($"Edit {type.Name}", value, onApply);
+                    ObjectEditPopup.Open($"Edit {type.Name}", value, onApply, GUILayoutUtility.GetLastRect());
                 }
             }
 

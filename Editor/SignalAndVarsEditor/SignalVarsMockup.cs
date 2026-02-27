@@ -10,11 +10,20 @@ namespace UniCore.Editor.Testing
     public struct PlayerTakeDamageSignal : ISignalEvent
     {
         public int Damage;
+        public int Damage2;
+        public int Damage3;
     }
 
     public struct BossDefeatedSignal : ISignalEvent
     {
         public string BossId;
+        public BossParam Param;
+        public struct BossParam
+        {
+            public int param1;
+            public int param2;
+            public int param3;
+        }
     }
 
     public class MockUIController : ISignalListener<GameStartedSignal>, ISignalListener<BossDefeatedSignal>
@@ -45,6 +54,13 @@ namespace UniCore.Editor.Testing
         public int Health;
         public string Name;
         public bool IsGameOver;
+        public PlayerParam Param;
+        public struct PlayerParam
+        {
+            public int param1;
+            public int param2;
+            public int param3;
+        }
     }
 
     public static class SignalVarsMockup
