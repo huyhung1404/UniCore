@@ -182,7 +182,7 @@ namespace UniCore.Notify.DotPing
 #if UNITY_ANDROID && !UNITY_EDITOR
         private void OnApplicationFocus(bool focus)
         {
-            if (locationData == null) return;
+            if (s_LocationData == null) return;
             if (focus)
             {
                 return;
