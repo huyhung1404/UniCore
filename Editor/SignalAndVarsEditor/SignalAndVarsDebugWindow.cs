@@ -292,8 +292,8 @@ namespace UniCore.Editor
         private static void DrawVariable(object variable)
         {
             var type = variable.GetType();
-            var key = (string)type.GetField("key", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(variable);
-            var valueProp = type.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
+            var key = (string)type.GetField("_key", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(variable);
+            var valueProp = type.GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic);
 
             EditorGUILayout.BeginHorizontal();
 
