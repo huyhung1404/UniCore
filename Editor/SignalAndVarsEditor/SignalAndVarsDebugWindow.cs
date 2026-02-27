@@ -10,17 +10,24 @@ namespace UniCore.Editor
 {
     public class SignalAndVarsDebugWindow : EditorWindow
     {
+        private const float k_minPanelRatio = 0.15f;
+        private const float k_maxPanelRatio = 0.85f;
         private Vector2 _scroll;
-        private Vector2 _historyScroll;
+        private Vector2 _varScroll;
         private double _lastRepaint;
         private string _sceneFilter = string.Empty;
         private string _scopeFilter = string.Empty;
         private string _signalFilter = string.Empty;
         private string _listenerFilter = string.Empty;
         private bool _autoRefresh;
-        private bool _drawHistory;
         private bool _drawVariable;
         private readonly Dictionary<Type, bool> _foldouts = new Dictionary<Type, bool>(64);
+        private static GUIContent s_pingIcon;
+        private static GUIContent s_deleteIcon;
+        private static GUIContent s_sendIcon;
+        private static GUIStyle s_metaStyle;
+        private float _signalPanelRatio;
+        private bool _isResizing;
 
         [MenuItem("UniCore/Windows/Signal And Vars", priority = 0)]
         public static void Open()
@@ -31,16 +38,18 @@ namespace UniCore.Editor
         private void OnEnable()
         {
             _autoRefresh = EditorPrefs.GetBool("UniSignal.AutoRefresh", true);
-            _drawHistory = EditorPrefs.GetBool("UniSignal.DrawHistory", false);
             _drawVariable = EditorPrefs.GetBool("UniSignal.DrawVariable", false);
             EditorApplication.update += UpdateLoop;
+            _signalPanelRatio = EditorPrefs.GetFloat("UniSignal.SignalPanelRatio", 0.5f);
+            var shouldAutoInject = EditorPrefs.GetBool("UniSignal.AutoInjectFakeData", false);
+            if (shouldAutoInject) Testing.SignalVarsMockup.InjectFakeData();
         }
 
         private void OnDisable()
         {
             EditorPrefs.SetBool("UniSignal.AutoRefresh", _autoRefresh);
-            EditorPrefs.SetBool("UniSignal.DrawHistory", _drawHistory);
             EditorPrefs.SetBool("UniSignal.DrawVariable", _drawVariable);
+            EditorPrefs.SetFloat("UniSignal.SignalPanelRatio", _signalPanelRatio);
             EditorApplication.update -= UpdateLoop;
         }
 
@@ -54,9 +63,13 @@ namespace UniCore.Editor
 
         private void OnGUI()
         {
+            InitIcons();
             DrawToolbar();
 
-            _scroll = EditorGUILayout.BeginScrollView(_scroll);
+            var currentSignalHeight = position.height * _signalPanelRatio;
+            var signalHeightOption = _drawVariable ? GUILayout.Height(currentSignalHeight) : GUILayout.ExpandHeight(true);
+
+            _scroll = EditorGUILayout.BeginScrollView(_scroll, false, false, signalHeightOption);
             foreach (var kvp in SignalSystem.s_Listeners)
             {
                 if (!PassSignalFilter(kvp.Key)) continue;
@@ -65,8 +78,62 @@ namespace UniCore.Editor
 
             EditorGUILayout.EndScrollView();
 
-            if (_drawVariable) DrawVariable();
-            if (_drawHistory) DrawDispatchHistory();
+            if (!_drawVariable) return;
+            DrawSplitter();
+            DrawVariable();
+        }
+
+        private void DrawSplitter()
+        {
+            var rect = GUILayoutUtility.GetRect(GUIContent.none, EditorStyles.label, GUILayout.Height(4), GUILayout.ExpandWidth(true));
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.12f, 1f));
+            }
+
+            EditorGUIUtility.AddCursorRect(rect, MouseCursor.ResizeVertical);
+
+            switch (Event.current.type)
+            {
+                case EventType.MouseDown:
+                    if (rect.Contains(Event.current.mousePosition))
+                    {
+                        _isResizing = true;
+                        Event.current.Use();
+                    }
+
+                    break;
+                case EventType.MouseDrag:
+                    if (_isResizing)
+                    {
+                        var deltaRatio = Event.current.delta.y / position.height;
+                        _signalPanelRatio += deltaRatio;
+                        _signalPanelRatio = Mathf.Clamp(_signalPanelRatio, k_minPanelRatio, k_maxPanelRatio);
+
+                        Event.current.Use();
+                        Repaint();
+                    }
+
+                    break;
+                case EventType.MouseUp:
+                    if (_isResizing)
+                    {
+                        _isResizing = false;
+                        EditorPrefs.SetFloat("UniSignal.SignalPanelRatio", _signalPanelRatio);
+                        Event.current.Use();
+                    }
+
+                    break;
+            }
+        }
+
+        private static void InitIcons()
+        {
+            if (s_pingIcon != null) return;
+            s_pingIcon = EditorGUIUtility.IconContent("d_Search Icon");
+            s_deleteIcon = EditorGUIUtility.IconContent("TreeEditor.Trash");
+            s_sendIcon = EditorGUIUtility.IconContent("d_PlayButton");
         }
 
         private bool PassSignalFilter(Type signalType)
@@ -82,7 +149,6 @@ namespace UniCore.Editor
             {
                 _autoRefresh = GUILayout.Toggle(_autoRefresh, "Auto Refresh", EditorStyles.toolbarButton);
                 _drawVariable = GUILayout.Toggle(_drawVariable, "Variable", EditorStyles.toolbarButton);
-                _drawHistory = GUILayout.Toggle(_drawHistory, "History", EditorStyles.toolbarButton);
                 GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Release Empty Lists", EditorStyles.toolbarButton)) SignalSystem.ReleaseEmptyLists();
                 if (GUILayout.Button("Clear All", EditorStyles.toolbarButton)) SignalSystem.Clear();
@@ -108,13 +174,17 @@ namespace UniCore.Editor
         {
             _foldouts.TryAdd(signalType, true);
 
-            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.BeginVertical("box", GUILayout.ExpandHeight(false));
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                _foldouts[signalType] = EditorGUILayout.Foldout(_foldouts[signalType], $"{signalType.Name} ({list.Count})", true);
+                var label = $"{signalType.Name} ({list.Count})";
+                _foldouts[signalType] = EditorGUILayout.Foldout(_foldouts[signalType], label, true, EditorStyles.foldoutHeader);
 
-                if (GUILayout.Button("Send", GUILayout.Width(60)))
+                GUILayout.FlexibleSpace();
+
+                s_sendIcon.tooltip = "Dispatch Signal";
+                if (GUILayout.Button(s_sendIcon, EditorStyles.iconButton, GUILayout.Width(30)))
                 {
                     SignalSendPopup.Open(signalType);
                 }
@@ -122,16 +192,28 @@ namespace UniCore.Editor
 
             if (_foldouts[signalType])
             {
-                EditorGUI.indentLevel++;
-                for (var i = 0; i < list.Count; i++)
+                GUILayout.Space(2);
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    if (!PassFilter(list.Get(i))) continue;
-                    DrawListener(signalType, list.Get(i));
-                }
+                    GUILayout.Space(6);
 
-                EditorGUI.indentLevel--;
+                    EditorGUILayout.BeginVertical();
+                    var drawIndex = 0;
+
+                    for (var i = 0; i < list.Count; i++)
+                    {
+                        var listener = list.Get(i);
+                        if (!PassFilter(listener)) continue;
+
+                        DrawListener(signalType, listener, drawIndex);
+                        drawIndex++;
+                    }
+
+                    EditorGUILayout.EndVertical();
+                }
             }
 
+            GUILayout.Space(4);
             EditorGUILayout.EndVertical();
         }
 
@@ -171,15 +253,33 @@ namespace UniCore.Editor
             return true;
         }
 
-        private static void DrawListener(Type signalType, object listener)
+        private static void DrawListener(Type signalType, object listener, int index)
         {
             var priority = GetListenerPriority(listener);
-            var oldColor = GUI.color;
-            GUI.color = GetPriorityColor(priority);
+            var priorityColor = GetPriorityColor(priority);
+
+            var listenerName = listener.GetType().Name;
+            var sourceText = SignalDebugUtil.GetSource(listener);
+
+            var rect = EditorGUILayout.BeginVertical(GUILayout.ExpandHeight(false));
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                var bgColor = index % 2 == 0
+                    ? new Color(0.15f, 0.15f, 0.15f, 0.2f)
+                    : new Color(0.25f, 0.25f, 0.25f, 0.2f);
+                EditorGUI.DrawRect(rect, bgColor);
+
+                var colorIndicatorRect = new Rect(rect.x, rect.y, 4, rect.height);
+                EditorGUI.DrawRect(colorIndicatorRect, priorityColor);
+            }
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button(listener.GetType().Name, GUILayout.Width(150)))
+                GUILayout.Space(8);
+
+                s_pingIcon.tooltip = "Ping Unity Object";
+                if (GUILayout.Button(s_pingIcon, EditorStyles.iconButton, GUILayout.Width(20)))
                 {
                     if (SignalDebugUtil.TryGetUnityObject(listener, out var obj))
                     {
@@ -188,18 +288,63 @@ namespace UniCore.Editor
                     }
                 }
 
-                EditorGUILayout.LabelField(SignalDebugUtil.GetSource(listener), GUILayout.Width(80));
-
-                DrawListenerMeta(listener);
+                var headerStyle = new GUIStyle(EditorStyles.label) { richText = true, wordWrap = true };
+                EditorGUILayout.LabelField($"<b>{listenerName}</b> <color=#909090><i>({sourceText})</i></color>", headerStyle);
 
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("X", GUILayout.Width(EditorGUIUtility.singleLineHeight)))
+
+                s_deleteIcon.tooltip = "Unregister Listener";
+                if (GUILayout.Button(s_deleteIcon, EditorStyles.iconButton, GUILayout.Width(20)))
                 {
                     UnregisterListener(signalType, listener);
                 }
             }
 
-            GUI.color = oldColor;
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Space(32);
+
+                if (s_metaStyle == null)
+                {
+                    s_metaStyle = new GUIStyle(EditorStyles.miniBoldLabel)
+                    {
+                        richText = true,
+                        padding = new RectOffset(0, 0, 2, 0),
+                        margin = new RectOffset(0, 0, 0, 0)
+                    };
+                }
+
+                var oldColor = GUI.color;
+                GUI.color = priorityColor;
+
+                GUILayout.Label($"● Priority: {priority}", s_metaStyle, GUILayout.Width(80));
+
+                GUI.color = oldColor;
+
+                GUILayout.Space(8);
+
+                DrawListenerScope(listener, s_metaStyle);
+
+                GUILayout.FlexibleSpace();
+            }
+
+            GUILayout.Space(4);
+            EditorGUILayout.EndVertical();
+        }
+
+        private static void DrawListenerScope(object listener, GUIStyle style)
+        {
+            foreach (var itf in listener.GetType().GetInterfaces())
+            {
+                if (!itf.IsGenericType || itf.GetGenericTypeDefinition() != typeof(ISignalListener<>)) continue;
+
+                var scope = itf.GetProperty("ListenScope")?.GetValue(listener);
+                var scopeText = scope != null ? SignalScopeRegistry.GetReadableScope((SignalScope)scope) : "N/A";
+
+                GUILayout.Label($"<color=#aaaaaa>❖ Scope: {scopeText}</color>", style, GUILayout.ExpandWidth(false));
+
+                return;
+            }
         }
 
         private static int GetListenerPriority(object listener)
@@ -246,69 +391,79 @@ namespace UniCore.Editor
             }
         }
 
-        private static void DrawListenerMeta(object listener)
-        {
-            foreach (var itf in listener.GetType().GetInterfaces())
-            {
-                if (!itf.IsGenericType || itf.GetGenericTypeDefinition() != typeof(ISignalListener<>)) continue;
-                var priority = itf.GetProperty("Priority")?.GetValue(listener);
-                var scope = itf.GetProperty("ListenScope")?.GetValue(listener);
-                var scopeText = scope != null ? SignalScopeRegistry.GetReadableScope((SignalScope)scope) : string.Empty;
-                EditorGUILayout.LabelField($"P: {priority} | S: {scopeText}");
-            }
-        }
-
-        private void DrawDispatchHistory()
-        {
-            EditorGUILayout.LabelField(GUIContent.none, GUI.skin.horizontalSlider);
-            EditorGUILayout.LabelField("Dispatch History", EditorStyles.boldLabel);
-
-            _historyScroll = EditorGUILayout.BeginScrollView(_historyScroll, GUILayout.Height(120));
-            foreach (var record in SignalDispatchHistory.Records) EditorGUILayout.LabelField(record);
-            EditorGUILayout.EndScrollView();
-            if (GUILayout.Button("Clear History")) SignalDispatchHistory.Clear();
-        }
-
         private void DrawVariable()
         {
-            EditorGUILayout.LabelField(GUIContent.none, GUI.skin.horizontalSlider);
-            EditorGUILayout.LabelField("Variables", EditorStyles.boldLabel);
+            GUILayout.Space(4);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Space(4);
+                EditorGUILayout.LabelField("Variables Overview", EditorStyles.boldLabel);
+            }
+
+            GUILayout.Space(4);
+
+            _varScroll = EditorGUILayout.BeginScrollView(_varScroll, false, false, GUILayout.ExpandHeight(true));
+
             foreach (var (nameStore, store) in VarsSystem.AllStores)
             {
                 DrawVariableStore(nameStore, store);
             }
+
+            EditorGUILayout.EndScrollView();
         }
 
         private void DrawVariableStore(string nameStore, VariableStore store)
         {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField(nameStore, EditorStyles.miniBoldLabel);
-            EditorGUI.indentLevel++;
-            foreach (var v in store.All) DrawVariable(v);
-            EditorGUI.indentLevel--;
+            EditorGUILayout.BeginVertical(GUILayout.ExpandHeight(false));
+
+            EditorGUILayout.LabelField($"■ {nameStore}", EditorStyles.boldLabel);
+            GUILayout.Space(2);
+
+            var drawIndex = 0;
+            foreach (var v in store.All)
+            {
+                DrawVariableItem(v, drawIndex);
+                drawIndex++;
+            }
+
             EditorGUILayout.EndVertical();
+            GUILayout.Space(8);
         }
 
-        private static void DrawVariable(object variable)
+        private static void DrawVariableItem(object variable, int index)
         {
             var type = variable.GetType();
-            var key = (string)type.GetField("_key", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(variable);
-            var valueProp = type.GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            EditorGUILayout.BeginHorizontal();
+            var keyField = type.GetField("_key", BindingFlags.Instance | BindingFlags.NonPublic);
+            var valueField = type.GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic);
 
-            EditorGUILayout.LabelField(key, GUILayout.Width(180));
+            if (keyField == null || valueField == null) return;
 
-            var value = valueProp!.GetValue(variable);
-            var newValue = DrawInlineValue(
-                valueProp.FieldType,
-                value,
-                v => valueProp.SetValue(variable, v)
-            );
+            var key = (string)keyField.GetValue(variable);
+            var value = valueField.GetValue(variable);
+
+            var rect = EditorGUILayout.BeginHorizontal(GUILayout.ExpandHeight(false));
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                var rowRect = new Rect(0, rect.y, EditorGUIUtility.currentViewWidth, rect.height > 0 ? rect.height : 20f);
+                var bgColor = index % 2 == 0
+                    ? new Color(0.15f, 0.15f, 0.15f, 0.2f)
+                    : new Color(0.25f, 0.25f, 0.25f, 0.2f);
+                EditorGUI.DrawRect(rowRect, bgColor);
+            }
+
+            GUILayout.Space(12);
+
+            var safeWidth = EditorGUIUtility.currentViewWidth - 50f;
+            var keyWidth = Mathf.Clamp(safeWidth * 0.4f, 100f, 200f);
+            EditorGUILayout.LabelField(key, EditorStyles.boldLabel, GUILayout.Width(keyWidth));
+
+            var newValue = DrawInlineValue(valueField.FieldType, value, v => valueField.SetValue(variable, v));
 
             if (!Equals(value, newValue))
             {
-                valueProp.SetValue(variable, newValue);
+                valueField.SetValue(variable, newValue);
             }
 
             EditorGUILayout.EndHorizontal();
@@ -316,19 +471,22 @@ namespace UniCore.Editor
 
         private static object DrawInlineValue(Type type, object value, Action<object> onApply)
         {
-            var v = EditorExtensions.DrawDefaultValue(type, GUIContent.none, value);
-            if (v.Item1) return v.Item2;
+            var (isDrawn, drawnValue) = EditorExtensions.DrawDefaultValue(type, GUIContent.none, value);
 
-            EditorGUILayout.BeginHorizontal();
+            if (isDrawn) return drawnValue;
 
-            EditorGUILayout.LabelField(type.Name, GUILayout.MaxWidth(120));
-            GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Edit", GUILayout.Width(40)))
+            using (new EditorGUILayout.HorizontalScope())
             {
-                ObjectEditPopup.Open($"Edit {type.Name}", value, onApply);
-            }
+                var typeName = $"[{type.Name}]";
+                EditorGUILayout.LabelField(typeName, EditorStyles.miniLabel, GUILayout.MinWidth(20));
 
-            EditorGUILayout.EndHorizontal();
+                GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button("Edit", EditorStyles.miniButton, GUILayout.Width(40)))
+                {
+                    ObjectEditPopup.Open($"Edit {type.Name}", value, onApply);
+                }
+            }
 
             return value;
         }
