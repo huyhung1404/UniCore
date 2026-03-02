@@ -22,7 +22,7 @@ namespace UniCore.Editor.AttributesDrawer
     [CustomPropertyDrawer(typeof(InterfaceReference<,>))]
     public class InterfaceReferenceDrawer : PropertyDrawer
     {
-        private const string fieldName = "underlyingValue";
+        private const string fieldName = "_underlyingValue";
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
