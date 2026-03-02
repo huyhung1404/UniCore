@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UniCore.Utilities;
 
-namespace UniCore.Editor
+namespace UniCore.Editor.AttributesDrawer
 {
     [CustomPropertyDrawer(typeof(SubAssetsAddress))]
     public class SubAssetsAddressDrawer : PropertyDrawer

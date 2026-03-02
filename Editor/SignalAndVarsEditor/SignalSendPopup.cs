@@ -5,7 +5,7 @@ using UniCore.Signal;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniCore.Editor
+namespace UniCore.Editor.Windows
 {
     public class SignalSendPopup : EditorWindow
     {

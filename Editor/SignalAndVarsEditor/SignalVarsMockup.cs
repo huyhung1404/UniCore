@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UniCore.Signal;
 
-namespace UniCore.Editor.Testing
+namespace UniCore.Editor.Windows.Testing
 {
     public struct GameStartedSignal : ISignalEvent
     {

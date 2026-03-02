@@ -35,7 +35,7 @@
         private static void InitializationIfNeed()
         {
             if (s_pipeline != null) return;
-            ISettings setting = UnityEngine.Resources.Load<StorageSettings>($"{nameof(StorageSettings)}.asset");
+            ISettings setting = SettingsProvider.Load();
             s_pipeline = new StoragePipeline(setting);
         }
     }

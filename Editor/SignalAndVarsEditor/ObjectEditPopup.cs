@@ -4,7 +4,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace UniCore.Editor
+namespace UniCore.Editor.Windows
 {
     public class ObjectEditPopup : EditorWindow
     {
