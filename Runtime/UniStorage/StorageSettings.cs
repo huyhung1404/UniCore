@@ -1,6 +1,6 @@
 ﻿using System;
 using UniCore.Attribute;
-using UnityEngine;
+using UniCore.Utilities;
 
 namespace UniCore.Storage
 {
@@ -15,7 +15,7 @@ namespace UniCore.Storage
     }
 
     [Serializable]
-    public class SerializableData
+    public struct SerializableData
     {
         public int Version;
 
@@ -35,10 +35,9 @@ namespace UniCore.Storage
         public InterfaceReference<IStorageProvider> StorageCustom;
     }
 
-    public sealed class StorageSettings : ScriptableObject, ISettings
+    public sealed class StorageSettings : UniSettingsBase<StorageSettings, SerializableData, EditorStorageSettings>, ISettings
     {
-        [SerializeField] internal SerializableData Data;
-
+        internal const string k_FileName = "UniCore_Runtime_StorageSettings";
         public int Version => Data.Version;
 
         public ISerializer Serializer
@@ -104,26 +103,6 @@ namespace UniCore.Storage
                     _ => new LocalStorage()
                 };
             }
-        }
-    }
-
-    public static class SettingsProvider
-    {
-        internal const string k_FileName = "UniCoreRuntimeStorageSettings";
-        public static Func<StorageSettings> s_EditorInstanceProvider;
-        public static StorageSettings Load()
-        {
-            var s_instance = Resources.Load<StorageSettings>(k_FileName);
-            if (s_instance != null) return s_instance;
-            
-            if (s_EditorInstanceProvider != null)
-            {
-                s_instance = s_EditorInstanceProvider.Invoke();
-                return s_instance;
-            }
-            
-            s_instance = ScriptableObject.CreateInstance<StorageSettings>();
-            return s_instance;
         }
     }
 }

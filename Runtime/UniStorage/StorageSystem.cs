@@ -35,7 +35,7 @@
         private static void InitializationIfNeed()
         {
             if (s_pipeline != null) return;
-            ISettings setting = SettingsProvider.Load();
+            ISettings setting = StorageSettings.GetInstance(StorageSettings.k_FileName);
             s_pipeline = new StoragePipeline(setting);
         }
     }

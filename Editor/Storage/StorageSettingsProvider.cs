@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using UniCore.Storage;
+using UnityEditor;
 
 namespace UniCore.Editor.Storage
 {
@@ -11,7 +12,7 @@ namespace UniCore.Editor.Storage
             {
                 guiHandler = (searchContext) =>
                 {
-                    var config = StorageEditorConfig.instance;
+                    var config = EditorStorageSettings.instance;
                     
                     if (config == null) return; // Early return
 
