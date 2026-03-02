@@ -45,7 +45,7 @@ namespace UniCore.Editor.QuickAccess
             menu.AddSeparator("");
 
             menu.AddItem(new GUIContent("Copy Config"), false,
-                () => EditorGUIUtility.systemCopyBuffer = JsonConvert.SerializeObject(QuickAccessStorage.Database(), Formatting.Indented));
+                () => EditorGUIUtility.systemCopyBuffer = JsonConvert.SerializeObject(EditorStorage.Database(), Formatting.Indented));
 
             menu.AddItem(new GUIContent("Apply Config"), false, () => QuickAccessApplyPopup.Open(position));
         }
@@ -57,7 +57,7 @@ namespace UniCore.Editor.QuickAccess
             DrawToolbar();
             DrawFavorite();
 
-            foreach (var g in QuickAccessStorage.Database().Groups)
+            foreach (var g in EditorStorage.Database().Groups)
                 DrawGroup(g);
         }
 
@@ -166,10 +166,10 @@ namespace UniCore.Editor.QuickAccess
         private static void ShowGroupMenu(GroupData group)
         {
             var menu = new GenericMenu();
-            var index = QuickAccessStorage.Database().Groups.IndexOf(group);
+            var index = EditorStorage.Database().Groups.IndexOf(group);
 
             var upEnable = index != -1 && index != 0;
-            var downEnable = index != -1 && index != QuickAccessStorage.Database().Groups.Count - 1;
+            var downEnable = index != -1 && index != EditorStorage.Database().Groups.Count - 1;
 
             AddItem(menu, new GUIContent("Move Up"), upEnable, () => MoveGroup(index, index - 1));
             AddItem(menu, new GUIContent("Move Down"), downEnable, () => MoveGroup(index, index + 1));
@@ -192,16 +192,16 @@ namespace UniCore.Editor.QuickAccess
         private static void DeleteGroup(GroupData group)
         {
             var removedGuids = group.Assets.Select(a => a.GuidAsset).ToList();
-            QuickAccessStorage.Database().Groups.Remove(group);
-            QuickAccessStorage.Database().Stats.RemoveAll(s => removedGuids.Contains(s.GUID));
-            QuickAccessStorage.Save(QuickAccessStorage.Database());
+            EditorStorage.Database().Groups.Remove(group);
+            EditorStorage.Database().Stats.RemoveAll(s => removedGuids.Contains(s.GUID));
+            EditorStorage.Save(EditorStorage.Database());
         }
 
         private static void MoveGroup(int index, int newIndex)
         {
-            var groups = QuickAccessStorage.Database().Groups;
+            var groups = EditorStorage.Database().Groups;
             (groups[index], groups[newIndex]) = (groups[newIndex], groups[index]);
-            QuickAccessStorage.Save(QuickAccessStorage.Database());
+            EditorStorage.Save(EditorStorage.Database());
         }
 
         private static void HandleTitleDrop(Rect rect, GroupData group)
@@ -230,7 +230,7 @@ namespace UniCore.Editor.QuickAccess
                         group.Assets.Add(new AssetAddress { GuidAsset = guid });
                 }
 
-                QuickAccessStorage.Save(QuickAccessStorage.Database());
+                EditorStorage.Save(EditorStorage.Database());
                 evt.Use();
             }
         }

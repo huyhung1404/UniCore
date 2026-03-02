@@ -9,8 +9,9 @@ namespace UniCore.Editor.Storage
         [SettingsProvider]
         public static SettingsProvider CreateProvider()
         {
-            var provider = new SettingsProvider("Project/UniCore/Storage Settings", SettingsScope.Project)
+            var provider = new SettingsProvider("Project/UniCore/Storage", SettingsScope.Project)
             {
+                keywords = new[] { "Storage", "Save", "Encrypt", "UniCore", "Security" },
                 guiHandler = (_) =>
                 {
                     var config = EditorStorageSettings.instance;
@@ -21,13 +22,19 @@ namespace UniCore.Editor.Storage
 
                     var editorDataProp = serializedObject.FindProperty("EditorData");
 
+                    EditorGUILayout.BeginVertical(new GUIStyle { padding = new RectOffset(10, 10, 10, 10) });
+
                     EditorGUI.BeginChangeCheck();
 
                     OnGUI(editorDataProp);
 
-                    if (!EditorGUI.EndChangeCheck()) return;
-                    serializedObject.ApplyModifiedProperties();
-                    config.SaveData();
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        serializedObject.ApplyModifiedProperties();
+                        config.SaveData();
+                    }
+
+                    EditorGUILayout.EndVertical();
                 }
             };
             return provider;
@@ -52,36 +59,67 @@ namespace UniCore.Editor.Storage
             var storageTypeProp = dataProperty.FindPropertyRelative("StorageType");
             var storageCustomProp = dataProperty.FindPropertyRelative("StorageCustom");
 
+            EditorGUILayout.LabelField("Core Configuration", EditorStyles.boldLabel);
+            EditorGUILayout.BeginVertical("helpbox");
+            EditorGUILayout.Space(3);
             EditorGUILayout.PropertyField(versionProp);
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(3);
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(10);
 
-            DrawField("Serialize", serializationTypeProp, (int)SerializationType.Custom, serializerCustomProp);
+            EditorGUILayout.LabelField("Data Handling", EditorStyles.boldLabel);
+            DrawField("Serialization Type", "d_TextAsset Icon", serializationTypeProp, (int)SerializationType.Custom, serializerCustomProp);
+            DrawField("Storage Medium", "d_Folder Icon", storageTypeProp, (int)StorageType.Custom, storageCustomProp);
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField("Security Layer", EditorStyles.boldLabel);
+            DrawField("Encryptor Type", "LockIcon", encryptionTypeProp, (int)EncryptionType.Custom, encryptorCustomProp);
+            DrawField("Protector Hash", "d_FilterByType", protectorTypeProp, (int)ProtectorType.Custom, protectorCustomProp);
 
             if (encryptionTypeProp.enumValueIndex == (int)EncryptionType.AES ||
                 protectorTypeProp.enumValueIndex == (int)ProtectorType.SHA256)
             {
-                DrawField("Key", keyTypeProp, (int)KeyType.Custom, keyCustomProp);
+                var prevColor = GUI.backgroundColor;
+                GUI.backgroundColor = new Color(1f, 0.8f, 0.8f, 1f);
+                DrawField("Encryption Key", "d_FilterByLabel", keyTypeProp, (int)KeyType.Custom, keyCustomProp);
+                GUI.backgroundColor = prevColor;
             }
-
-            DrawField("Encryptor", encryptionTypeProp, (int)EncryptionType.Custom, encryptorCustomProp);
-            DrawField("Protector", protectorTypeProp, (int)ProtectorType.Custom, protectorCustomProp);
-            DrawField("Storage", storageTypeProp, (int)StorageType.Custom, storageCustomProp);
         }
 
-        private static void DrawField(string title, SerializedProperty enumProperty, int targetCustomId, SerializedProperty customProperty)
+        private static void DrawField(string title, string iconId, SerializedProperty enumProperty, int targetCustomId, SerializedProperty customProperty)
         {
-            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
-            EditorGUI.indentLevel++;
+            EditorGUILayout.BeginVertical("helpbox");
+            EditorGUILayout.Space(2);
 
+            var headerContent = GetSafeHeaderContent(title, iconId);
+            EditorGUILayout.LabelField(headerContent, EditorStyles.boldLabel);
+            EditorGUILayout.Space(2);
+
+            EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(enumProperty, GUIContent.none);
 
             if (customProperty != null && enumProperty.enumValueIndex == targetCustomId)
             {
+                EditorGUILayout.Space(2);
                 EditorGUILayout.PropertyField(customProperty, GUIContent.none);
             }
 
             EditorGUI.indentLevel--;
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(4);
+            EditorGUILayout.EndVertical();
+        }
+
+        private static GUIContent GetSafeHeaderContent(string title, string iconId)
+        {
+            var iconContent = EditorGUIUtility.IconContent(iconId);
+
+            if (iconContent != null && iconContent.image != null)
+            {
+                return new GUIContent($" {title}", iconContent.image);
+            }
+
+            var fallbackIcon = EditorGUIUtility.IconContent("d_GameObject Icon").image;
+            return new GUIContent($" {title}", fallbackIcon);
         }
     }
 }

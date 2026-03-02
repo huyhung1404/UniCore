@@ -31,10 +31,10 @@ namespace UniCore.Editor.QuickAccess
 
                 if (GUILayout.Button("Create"))
                 {
-                    if (GroupNameValid(QuickAccessStorage.Database()))
+                    if (GroupNameValid(EditorStorage.Database()))
                     {
-                        QuickAccessStorage.Database().Groups.Add(new GroupData { GroupName = _groupName });
-                        QuickAccessStorage.Save(QuickAccessStorage.Database());
+                        EditorStorage.Database().Groups.Add(new GroupData { GroupName = _groupName });
+                        EditorStorage.Save(EditorStorage.Database());
                     }
 
                     Close();

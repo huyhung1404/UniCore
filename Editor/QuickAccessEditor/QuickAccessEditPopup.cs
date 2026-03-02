@@ -26,13 +26,13 @@ namespace UniCore.Editor.QuickAccess
         {
             PopupGUI.BeginPopup();
 
-            var db = QuickAccessStorage.Database();
+            var db = EditorStorage.Database();
             
             EditorGUI.BeginChangeCheck();
             _asset.Name = EditorGUILayout.TextField("Name", _asset.Name);
             if (EditorGUI.EndChangeCheck())
             {
-                QuickAccessStorage.Save(db);
+                EditorStorage.Save(db);
                 RepaintAll();
             }
 
@@ -52,7 +52,7 @@ namespace UniCore.Editor.QuickAccess
                     db.Stats.RemoveAll(s => s.GUID == _asset.GuidAsset);
                 }
 
-                QuickAccessStorage.Save(db);
+                EditorStorage.Save(db);
                 Close();
             }
 

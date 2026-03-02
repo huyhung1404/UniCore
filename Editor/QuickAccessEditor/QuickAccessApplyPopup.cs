@@ -36,7 +36,7 @@ namespace UniCore.Editor.QuickAccess
                 {
                     if (string.IsNullOrEmpty(_json)) throw new Exception("Json is empty");
                     var db = JsonConvert.DeserializeObject<QuickAccessDB>(_json);
-                    QuickAccessStorage.Save(db);
+                    EditorStorage.Save(db);
                 }
                 catch (Exception e)
                 {
