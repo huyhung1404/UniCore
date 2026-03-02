@@ -20,8 +20,8 @@ namespace UniCore.Audio
 
     public struct PlaySoundSignal : ISignalEvent
     {
-        public string Clip;
-        public string Config;
+        public string NodePath;
+        public string ConfigId;
 
         public bool IsLoop;
 
@@ -34,7 +34,7 @@ namespace UniCore.Audio
     public struct ChangeSoundSignal : ISignalEvent
     {
         public int SoundId;
-        public string Clip;
+        public string NodePath;
     }
 
     public struct StopSoundSignal : ISignalEvent

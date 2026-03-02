@@ -1,10 +1,8 @@
 ﻿#if HAS_UNITASK && HAS_ADDRESSABLES
 using Cysharp.Threading.Tasks;
-using UniCore.Audio.Node;
 using UniCore.Audio.Pool;
 using UniCore.Signal;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 namespace UniCore.Audio
 {
@@ -17,24 +15,47 @@ namespace UniCore.Audio
         [Header("Audio control")] [Range(0f, 1f), SerializeField] private float m_masterVolume = 1f;
         [Range(0f, 1f), SerializeField] private float m_musicVolume = 1f;
         [Range(0f, 1f), SerializeField] private float m_sfxVolume = 1f;
-        internal static AudioSystem s_Instance;
-        internal AudioSettings Settings;
+        
+        public static AudioSystem s_Instance;
+
+        public AudioRuntimeSettings RuntimeSettings;
+        public AudioSearchSystem SearchSystem;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Create()
         {
             if (s_Instance != null) return;
             var go = new GameObject("AudioSystem");
-            go.AddComponent<AudioSystem>();
+            s_Instance = go.AddComponent<AudioSystem>();
             go.AddComponent<AudioListener>();
             DontDestroyOnLoad(go);
         }
 
         private void Awake()
         {
+            if (s_Instance != null && s_Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             s_Instance = this;
-            Settings = Resources.Load<AudioSettings>(nameof(AudioSettings));
-            SoundEmitterPool.Prewarm(Settings.PoolInitialSize);
+
+#if UNITY_EDITOR
+            RuntimeSettings = AudioEditorSettings.CreateRuntimeInstance();
+#else
+            RuntimeSettings = Resources.Load<AudioRuntimeSettings>(AudioRuntimeSettings.k_FileName);
+#endif
+
+            if (RuntimeSettings == null)
+            {
+                Debug.LogError("[UniAudio] AudioRuntimeSettings is not exits.");
+                return;
+            }
+            
+            SearchSystem = new AudioSearchSystem().WithRuntimeSettings(RuntimeSettings);
+
+            SoundEmitterPool.Prewarm(RuntimeSettings.PoolInitialSize);
 
             m_masterVolume = PlayerPrefs.GetFloat("MasterVolume", 1);
             m_musicVolume = PlayerPrefs.GetFloat("MusicVolume", 1);
@@ -47,7 +68,7 @@ namespace UniCore.Audio
 
         private void OnValidate()
         {
-            if (!Application.isPlaying) return;
+            if (!Application.isPlaying || RuntimeSettings == null) return;
             SetGroupVolume("MasterVolume", m_masterVolume);
             SetGroupVolume("MusicVolume", m_musicVolume);
             SetGroupVolume("SFXVolume", m_sfxVolume);
@@ -58,7 +79,6 @@ namespace UniCore.Audio
             SignalSystem.Register<ChangeMasterVolumeSignal>(this);
             SignalSystem.Register<ChangeMusicVolumeSignal>(this);
             SignalSystem.Register<ChangeSFXVolumeSignal>(this);
-
             SignalSystem.Register<PlaySoundSignal>(this);
         }
 
@@ -67,7 +87,6 @@ namespace UniCore.Audio
             SignalSystem.Unregister<ChangeMasterVolumeSignal>(this);
             SignalSystem.Unregister<ChangeMusicVolumeSignal>(this);
             SignalSystem.Unregister<ChangeSFXVolumeSignal>(this);
-
             SignalSystem.Unregister<PlaySoundSignal>(this);
         }
 
@@ -93,8 +112,10 @@ namespace UniCore.Audio
 
         private void SetGroupVolume(string parameterName, float normalizedVolume)
         {
-            var volumeSet = Settings.OutputMixer.SetFloat(parameterName, NormalizedToMixerValue(normalizedVolume));
-            if (!volumeSet) Debug.LogError("The AudioMixer parameter was not found");
+            if (RuntimeSettings == null || RuntimeSettings.OutputMixer == null) return;
+
+            var volumeSet = RuntimeSettings.OutputMixer.SetFloat(parameterName, NormalizedToMixerValue(normalizedVolume));
+            if (!volumeSet) Debug.LogWarning($"[UniAudio] AudioMixer parameter: {parameterName} is not exits.");
         }
 
         private static float NormalizedToMixerValue(float normalizedValue)
@@ -111,34 +132,29 @@ namespace UniCore.Audio
 
         private static async UniTaskVoid PlaySound(PlaySoundSignal signal)
         {
-            var (config, clipData) = await UniTask.WhenAll(GetConfiguration(signal.Config), GetClipData(signal.Clip));
+            if (s_Instance == null || s_Instance.SearchSystem == null) return;
+
+            var config = s_Instance.SearchSystem.GetConfiguration(signal.ConfigId);
+            var node = s_Instance.SearchSystem.FindNode(signal.NodePath);
+
+            if (node == null)
+            {
+                Debug.LogWarning($"[UniAudio] Node: {signal.NodePath} is not exits");
+                return;
+            }
+
+            var clipData = await node.GetClipData();
+
+            if (clipData == null || clipData.Clips == null || clipData.Clips.Count == 0) return;
+
             foreach (var clip in clipData.Clips)
             {
+                if (clip == null) continue;
                 var soundEmitter = SoundEmitterPool.Pop();
                 soundEmitter.PlayAudioClip(signal, clip, config);
             }
 
             ClipDataPool.Push(clipData);
-        }
-
-        public static async UniTask<AudioConfiguration> GetConfiguration(string config)
-        {
-            var handle = Addressables.LoadAssetAsync<AudioConfiguration>($"{s_Instance.Settings.GroupAddress}/Configs/{config}.asset");
-            if (handle.IsDone && handle.IsValid()) return handle.Result;
-            return await handle.ToUniTask();
-        }
-
-        public static async UniTask<ClipData> GetClipData(string clip)
-        {
-            var node = await GetClipNode(clip);
-            return await node.GetClipData();
-        }
-
-        public static async UniTask<BaseAudioNode> GetClipNode(string clip)
-        {
-            var handle = Addressables.LoadAssetAsync<BaseAudioNode>($"{s_Instance.Settings.GroupAddress}/Nodes/{clip}.asset");
-            if (handle.IsDone && handle.IsValid()) return handle.Result;
-            return await handle.ToUniTask();
         }
     }
 }

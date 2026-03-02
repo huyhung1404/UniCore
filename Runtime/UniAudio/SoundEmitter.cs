@@ -1,4 +1,5 @@
 ﻿#if HAS_UNITASK && HAS_ADDRESSABLES
+using System;
 using Cysharp.Threading.Tasks;
 using UniCore.Audio.Pool;
 using UniCore.Signal;
@@ -9,6 +10,7 @@ namespace UniCore.Audio
     [RequireComponent(typeof(AudioSource))]
     public class SoundEmitter : MonoBehaviour, ISignalListener<StopSoundSignal>, ISignalListener<ChangeSoundSignal>
     {
+        // Instance Field (Private): _camelCase
         private AudioSource _source;
         private int? _configHash;
         private float _timeRequire;
@@ -24,6 +26,7 @@ namespace UniCore.Audio
         public void PlayAudioClip(in PlaySoundSignal signal, AudioClip clip, AudioConfiguration configuration)
         {
             _source.clip = clip;
+            
             if (configuration != null && (_configHash == null || _configHash != configuration.GetHashCode()))
             {
                 _configHash = configuration.GetHashCode();
@@ -36,10 +39,13 @@ namespace UniCore.Audio
             _source.loop = signal.IsLoop;
             _source.time = 0f;
             _source.Play();
+            
             _timeRequire = clip.length / Mathf.Abs(_source.pitch);
             if (signal.IsLoop) _timeRequire = 0f;
+            
             _needReturnToPool = true;
             _soundId = signal.SoundId;
+            
             if (_soundId != null) RegisterSoundEvent();
         }
 
@@ -87,20 +93,34 @@ namespace UniCore.Audio
         public void OnSignal(ChangeSoundSignal signal)
         {
             if (signal.SoundId != _soundId) return;
-            _ = ChangeSound(signal.Clip);
+            _ = ChangeSound(signal.NodePath);
         }
 
         private async UniTaskVoid ChangeSound(string clipAddress)
         {
-            if (!_source) return;
+            if (!_source || AudioSystem.s_Instance == null || AudioSystem.s_Instance.SearchSystem == null) return;
+            
             var currentSoundId = _soundId;
-            var clipData = await AudioSystem.GetClipData(clipAddress);
-            if (clipData == null || currentSoundId != _soundId) return;
+        
+            var node = AudioSystem.s_Instance.SearchSystem.FindNode(clipAddress.AsSpan());
+            if (node == null) return;
+
+            var clipData = await node.GetClipData();
+            
+            if (clipData == null || currentSoundId != _soundId)
+            {
+                if (clipData != null) ClipDataPool.Push(clipData);
+                return;
+            }
+
             var newClip = clipData.Clips[0];
+            
+            ClipDataPool.Push(clipData);
+
             const float fadeOutTime = 0.15f;
             var startVolume = _source.volume;
             var t = 0f;
-
+            
             while (t < fadeOutTime && _source && _source.isPlaying)
             {
                 t += Time.deltaTime;
@@ -118,7 +138,7 @@ namespace UniCore.Audio
 
             const float fadeInTime = 0.15f;
             t = 0f;
-
+            
             while (t < fadeInTime && _source)
             {
                 t += Time.deltaTime;

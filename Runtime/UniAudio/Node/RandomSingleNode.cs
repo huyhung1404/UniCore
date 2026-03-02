@@ -1,4 +1,5 @@
 ﻿#if HAS_UNITASK && HAS_ADDRESSABLES
+using System;
 using Cysharp.Threading.Tasks;
 using UniCore.Audio.Pool;
 using UnityEngine;
@@ -6,7 +7,7 @@ using Random = UnityEngine.Random;
 
 namespace UniCore.Audio.Node
 {
-    [CreateAssetMenu(menuName = "UniCore/Audio/Node/Random Single")]
+    [Serializable]
     public class RandomSingleAudioNode : GroupAudioNode
     {
         public enum SequenceMode
@@ -20,17 +21,26 @@ namespace UniCore.Audio.Node
         private int _nextClipToPlay = -1;
         private int _lastClipPlayed = -1;
 
-        private void OnEnable()
-        {
-            hideFlags = HideFlags.DontUnloadUnusedAsset;
-        }
-
         public override async UniTask<ClipData> GetClipData()
         {
             var data = ClipDataPool.Pop();
             var reference = GetNextClip();
             data.Clips.Add(await reference.LoadAsync());
             return data;
+        }
+
+        public override (Log, string) IsValid()
+        {
+            if (string.IsNullOrEmpty(NodeName)) return (Log.Error, "Node name is empty.");
+            if (_references == null) return (Log.Error, "References is null.");
+            if (_references.Length == 0) return (Log.Error, "References is empty.");
+            for (var index = 0; index < _references.Length; index++)
+            {
+                var refClip = _references[index];
+                if (refClip == null || !refClip.RuntimeKeyIsValid()) return (Log.Error, $"[{index}] Reference is invalid.");
+            }
+
+            return (Log.None, null);
         }
 
         private AudioClipReference GetNextClip()

@@ -12,7 +12,7 @@ namespace UniCore.Audio.Pool
         {
             for (var i = 0; i < count; i++)
             {
-                var o = Object.Instantiate(AudioSystem.s_Instance.Settings.SoundEmitterPrefab);
+                var o = Object.Instantiate(AudioSystem.s_Instance.RuntimeSettings.SoundEmitterPrefab);
                 Push(o);
             }
         }
@@ -26,7 +26,7 @@ namespace UniCore.Audio.Pool
 
         public static SoundEmitter Pop()
         {
-            if (s_pool.Count <= 0) return Object.Instantiate(AudioSystem.s_Instance.Settings.SoundEmitterPrefab);
+            if (s_pool.Count <= 0) return Object.Instantiate(AudioSystem.s_Instance.RuntimeSettings.SoundEmitterPrefab);
             var r = s_pool.Dequeue();
             r.gameObject.SetActive(true);
             return r;

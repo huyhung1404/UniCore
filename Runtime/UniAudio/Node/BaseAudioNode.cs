@@ -1,64 +1,31 @@
 ﻿#if HAS_UNITASK && HAS_ADDRESSABLES
+using System;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.ResourceManagement.AsyncOperations;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace UniCore.Audio.Node
 {
-    [System.Serializable]
-    public class AudioClipReference : AssetReferenceT<AudioClip>
+    public enum Log
     {
-        private AsyncOperationHandle<AudioClip>? _handle;
-
-        public AudioClipReference(string guid) : base(guid)
-        {
-        }
-
-        public override bool ValidateAsset(string path)
-        {
-#if UNITY_EDITOR
-            return AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(AudioClip);
-#else
-            return false;
-#endif
-        }
-
-        public async UniTask<AudioClip> LoadAsync()
-        {
-            if (!_handle.HasValue || !_handle.Value.IsValid())
-            {
-                _handle = Addressables.LoadAssetAsync<AudioClip>(this);
-            }
-
-            var op = _handle.Value;
-
-            if (!op.IsDone) await op.Task;
-
-            if (op.Status == AsyncOperationStatus.Succeeded) return op.Result;
-
-            Debug.LogError("[AudioClipReference] Load failed");
-            return null;
-        }
-
-        public void Release()
-        {
-            if (_handle.HasValue && _handle.Value.IsValid())
-            {
-                Addressables.Release(_handle.Value);
-                return;
-            }
-
-            _handle = null;
-        }
+        None,
+        Warning,
+        Error
     }
 
-    public abstract class BaseAudioNode : ScriptableObject
+    [Serializable]
+    public abstract class BaseAudioNode
     {
+        [SerializeField] private string m_nodeName;
+        public string NodeName => m_nodeName;
+
+        public BaseAudioNode WithName(string name)
+        {
+            m_nodeName = name;
+            return this;
+        }
+
         public abstract UniTask<ClipData> GetClipData();
+        public abstract (Log, string) IsValid();
     }
 }
 #endif

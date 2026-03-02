@@ -1,11 +1,13 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Audio;
 
 namespace UniCore.Audio
 {
-    [CreateAssetMenu(menuName = "UniCore/Audio/Configuration")]
-    public class AudioConfiguration : ScriptableObject
+    [Serializable]
+    public class AudioConfiguration
     {
+        public string Id;
         public AudioMixerGroup Output;
         public bool Mute;
         public bool BypassEffects;
