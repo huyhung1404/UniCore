@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace UniCore.Signal
@@ -91,7 +92,44 @@ namespace UniCore.Signal
             }
 
             _isDispatching = false;
-            
+            ApplyPendingModifications();
+        }
+
+        public async ValueTask DispatchAsync(T signal, SignalScope scope)
+        {
+            _isDispatching = true;
+            var count = _list.Count;
+
+            for (var i = 0; i < count; i++)
+            {
+                var listener = _list[i];
+                
+                if (_pendingRemoves != null && _pendingRemoves.Contains(listener)) continue;
+                if (!listener.ListenScope.Intersects(scope)) continue;
+
+                try
+                {
+                    if (listener is IAsyncSignalListener<T> asyncListener)
+                    {
+                        await asyncListener.OnSignalAsync(signal);
+                    }
+                    else
+                    {
+                        listener.OnSignal(signal);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[UniSignal] Async Exception: {ex}");
+                }
+            }
+
+            _isDispatching = false;
+            ApplyPendingModifications();
+        }
+
+        private void ApplyPendingModifications()
+        {
             if (_pendingRemoves != null && _pendingRemoves.Count > 0)
             {
                 var removeCount = _pendingRemoves.Count;
