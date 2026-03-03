@@ -1,6 +1,4 @@
-﻿// #define SIGNAL_THREAD_SAFE
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
