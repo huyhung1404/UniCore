@@ -43,8 +43,10 @@ namespace UniCore.Editor.Windows
             _drawVariable = EditorPrefs.GetBool("UniSignal.DrawVariable", false);
             EditorApplication.update += UpdateLoop;
             _signalPanelRatio = EditorPrefs.GetFloat("UniSignal.SignalPanelRatio", 0.5f);
+#if UNICORE_TESTING
             var shouldAutoInject = EditorPrefs.GetBool("UniSignal.AutoInjectFakeData", false);
             if (shouldAutoInject) Testing.SignalVarsMockup.InjectFakeData();
+#endif
         }
 
         private void OnDisable()

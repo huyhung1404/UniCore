@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿#if UNICORE_TESTING
+using UnityEditor;
 using UniCore.Signal;
 
 namespace UniCore.Editor.Windows.Testing
@@ -100,3 +101,4 @@ namespace UniCore.Editor.Windows.Testing
         }
     }
 }
+#endif

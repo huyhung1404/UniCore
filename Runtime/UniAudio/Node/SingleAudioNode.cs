@@ -9,20 +9,32 @@ namespace UniCore.Audio.Node
     [Serializable]
     public class SingleAudioNode : BaseAudioNode
     {
-        [SerializeField] private AudioClipReference _reference;
+        [SerializeField] private AudioClipReference m_reference;
 
         public override async UniTask<ClipData> GetClipData()
         {
             var data = ClipDataPool.Pop();
-            data.Clips.Add(await _reference.LoadAsync());
+            var clip = await m_reference.LoadAsync();
+            if (clip != null)
+            {
+                data.Commands.Add(new ClipPlayCommand
+                {
+                    Clip = clip,
+                    Delay = 0f,
+                    Reference = m_reference,
+                    ReleaseDelay = ReleaseDelay
+                });
+            }
+
             return data;
         }
 
         public override (Log, string) IsValid()
         {
             if (string.IsNullOrEmpty(NodeName)) return (Log.Error, "Node name is empty.");
-            if (_reference == null) return (Log.Error, "References is null.");
-            if (!_reference.RuntimeKeyIsValid()) return (Log.Error, "Reference is invalid.");
+            if (m_reference == null) return (Log.Error, "Reference is null.");
+            if (!m_reference.RuntimeKeyIsValid()) return (Log.Error, "Reference is invalid Addressable key.");
+
             return (Log.None, null);
         }
     }

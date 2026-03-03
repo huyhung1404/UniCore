@@ -29,6 +29,13 @@ namespace UniCore.Audio
         public Transform Parent;
 
         public int? SoundId;
+        public float? OverrideReleaseDelay;
+    }
+    
+    public struct ChangeSnapshotSignal : ISignalEvent
+    {
+        public string SnapshotName;
+        public float TransitionTime;
     }
 
     public struct ChangeSoundSignal : ISignalEvent

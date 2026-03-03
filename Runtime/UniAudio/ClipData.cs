@@ -4,18 +4,26 @@ using UnityEngine;
 
 namespace UniCore.Audio
 {
+    public struct ClipPlayCommand
+    {
+        public AudioClip Clip;
+        public float Delay;
+        public AudioClipReference Reference;
+        public float ReleaseDelay;
+    }
+    
     public class ClipData
     {
-        public readonly List<AudioClip> Clips;
+        public readonly List<ClipPlayCommand> Commands;
 
         public ClipData()
         {
-            Clips = new List<AudioClip>(4);
+            Commands = new List<ClipPlayCommand>(4);
         }
 
         public void Clear()
         {
-            Clips.Clear();
+            Commands.Clear();
         }
     }
 }

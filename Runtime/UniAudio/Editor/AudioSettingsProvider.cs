@@ -17,7 +17,7 @@ namespace UniCore.Editor.Audio
         {
             var provider = new SettingsProvider("Project/UniCore/Audio", SettingsScope.Project)
             {
-                keywords = new[] { "Audio", "UniCore", "Node", "Tree", "Settings", "Configuration" },
+                keywords = new[] { "Audio", "UniCore", "Node", "Tree", "Settings", "Configuration", "Ducking" },
                 guiHandler = (_) =>
                 {
 #if HAS_UNITASK && HAS_ADDRESSABLES
@@ -46,9 +46,10 @@ namespace UniCore.Editor.Audio
                     if (EditorGUI.EndChangeCheck())
                     {
                         serializedObject.ApplyModifiedProperties();
-                        config.SaveData(); 
+                        config.SaveData();
                     }
 #endif
+                    EditorGUILayout.Space(20);
                     EditorGUILayout.EndVertical();
                 }
             };
@@ -56,6 +57,29 @@ namespace UniCore.Editor.Audio
         }
 
 #if HAS_UNITASK && HAS_ADDRESSABLES
+
+        #region Nút Play Editor (C++ Native) 🎧
+
+        private static void PlayEditorAudio(AudioClip clip)
+        {
+            if (clip == null) return;
+            var assembly = typeof(AudioImporter).Assembly;
+            var type = assembly.GetType("UnityEditor.AudioUtil");
+            var method = type?.GetMethod("PlayClip", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null,
+                new[] { typeof(AudioClip), typeof(int), typeof(bool) }, null);
+            method?.Invoke(null, new object[] { clip, 0, false });
+        }
+
+        private static void StopEditorAudio()
+        {
+            var assembly = typeof(AudioImporter).Assembly;
+            var type = assembly.GetType("UnityEditor.AudioUtil");
+            var method = type?.GetMethod("StopAllPreviewClips", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+            method?.Invoke(null, null);
+        }
+
+        #endregion
+
         private static void OnGUI(SerializedObject serializedObject)
         {
             DrawGeneralSettings(serializedObject);
@@ -126,18 +150,25 @@ namespace UniCore.Editor.Audio
             {
                 configsProp.arraySize++;
                 var newElem = configsProp.GetArrayElementAtIndex(configsProp.arraySize - 1);
-                
+
                 newElem.FindPropertyRelative("Id").stringValue = $"NewProfile_{configsProp.arraySize}";
                 newElem.FindPropertyRelative("Volume").floatValue = 1f;
+                newElem.FindPropertyRelative("VolumeVariance").floatValue = 0f;
                 newElem.FindPropertyRelative("Pitch").floatValue = 1f;
+                newElem.FindPropertyRelative("PitchVariance").floatValue = 0f;
                 newElem.FindPropertyRelative("SpatialBlend").floatValue = 0f;
                 newElem.FindPropertyRelative("ReverbZoneMix").floatValue = 1f;
                 newElem.FindPropertyRelative("DopplerLevel").floatValue = 1f;
                 newElem.FindPropertyRelative("MaxDistance").floatValue = 50f;
                 newElem.FindPropertyRelative("VolumeRolloff").enumValueIndex = (int)AudioRolloffMode.Logarithmic;
+
+                newElem.FindPropertyRelative("IsDucking").boolValue = false;
+                newElem.FindPropertyRelative("DuckingRatio").floatValue = 0.2f;
+                newElem.FindPropertyRelative("DuckingFadeTime").floatValue = 0.5f;
             }
+
             EditorGUILayout.EndHorizontal();
-            
+
             GUILayout.Space(5);
 
             for (var i = 0; i < configsProp.arraySize; i++)
@@ -151,7 +182,7 @@ namespace UniCore.Editor.Audio
                 EditorGUILayout.BeginHorizontal();
                 var foldoutRect = GUILayoutUtility.GetRect(15, 20, GUILayout.ExpandWidth(false));
                 configProp.isExpanded = EditorGUI.Foldout(foldoutRect, configProp.isExpanded, GUIContent.none, true);
-                
+
                 GUILayout.Label(EditorGUIUtility.IconContent("AudioMixerController Icon"), GUILayout.Width(20), GUILayout.Height(20));
                 idProp.stringValue = EditorGUILayout.TextField(idProp.stringValue, EditorStyles.boldLabel, GUILayout.ExpandWidth(true));
 
@@ -160,8 +191,9 @@ namespace UniCore.Editor.Audio
                     configsProp.DeleteArrayElementAtIndex(i);
                     EditorGUILayout.EndHorizontal();
                     EditorGUILayout.EndVertical();
-                    break; 
+                    break;
                 }
+
                 EditorGUILayout.EndHorizontal();
 
                 if (configProp.isExpanded)
@@ -176,11 +208,15 @@ namespace UniCore.Editor.Audio
                     DrawConfigSection("Basic Settings", () =>
                     {
                         EditorGUILayout.Slider(configProp.FindPropertyRelative("Volume"), 0f, 1f, new GUIContent("Volume"));
+                        EditorGUILayout.Slider(configProp.FindPropertyRelative("VolumeVariance"), 0f, 0.5f,
+                            new GUIContent("Volume Var (\u00B1)", "Biến thiên âm lượng ngẫu nhiên"));
+
                         EditorGUILayout.Slider(configProp.FindPropertyRelative("Pitch"), -3f, 3f, new GUIContent("Pitch"));
-                        
+                        EditorGUILayout.Slider(configProp.FindPropertyRelative("PitchVariance"), 0f, 1f, new GUIContent("Pitch Var (\u00B1)", "Biến thiên cao độ ngẫu nhiên"));
+
                         DrawSliderWithLabels(configProp.FindPropertyRelative("StereoPan"), -1f, 1f, new GUIContent("Stereo Pan"), "Left", "Right");
                         DrawSliderWithLabels(configProp.FindPropertyRelative("SpatialBlend"), 0f, 1f, new GUIContent("Spatial Blend"), "2D", "3D");
-                        
+
                         EditorGUILayout.Slider(configProp.FindPropertyRelative("ReverbZoneMix"), 0f, 1.1f, new GUIContent("Reverb Zone Mix"));
                         EditorGUILayout.IntSlider(configProp.FindPropertyRelative("Priority"), 0, 256, new GUIContent("Priority (0 = High)"));
                     });
@@ -194,13 +230,28 @@ namespace UniCore.Editor.Audio
                         EditorGUILayout.IntSlider(configProp.FindPropertyRelative("Spread"), 0, 360, new GUIContent("Spread"));
                     });
 
+                    DrawConfigSection("Ducking System", () =>
+                    {
+                        var isDuckingProp = configProp.FindPropertyRelative("IsDucking");
+                        EditorGUILayout.PropertyField(isDuckingProp, new GUIContent("Enable Auto-Ducking"));
+
+                        if (isDuckingProp.boolValue)
+                        {
+                            EditorGUI.indentLevel++;
+                            EditorGUILayout.Space(2);
+                            EditorGUILayout.Slider(configProp.FindPropertyRelative("DuckingRatio"), 0f, 1f, new GUIContent("Target Volume Ratio"));
+                            EditorGUILayout.PropertyField(configProp.FindPropertyRelative("DuckingFadeTime"), new GUIContent("Fade Time"));
+                            EditorGUI.indentLevel--;
+                        }
+                    });
+
                     DrawConfigSection("Effects & Bypass", () =>
                     {
                         var oldIndent = EditorGUI.indentLevel;
-                        EditorGUI.indentLevel = 0; 
-                        
+                        EditorGUI.indentLevel = 0;
+
                         EditorGUILayout.BeginHorizontal();
-                        GUILayout.Space(15); 
+                        GUILayout.Space(15);
                         EditorGUILayout.PropertyField(configProp.FindPropertyRelative("Mute"), new GUIContent("Mute"), GUILayout.Width(50));
                         GUILayout.FlexibleSpace();
                         EditorGUILayout.PropertyField(configProp.FindPropertyRelative("BypassEffects"), new GUIContent("Bypass FX"), GUILayout.Width(80));
@@ -209,7 +260,7 @@ namespace UniCore.Editor.Audio
                         GUILayout.FlexibleSpace();
                         EditorGUILayout.PropertyField(configProp.FindPropertyRelative("BypassReverbZones"), new GUIContent("Bypass Reverb"), GUILayout.Width(110));
                         EditorGUILayout.EndHorizontal();
-                        
+
                         EditorGUI.indentLevel = oldIndent;
                     });
 
@@ -225,11 +276,11 @@ namespace UniCore.Editor.Audio
         private static void DrawSliderWithLabels(SerializedProperty prop, float min, float max, GUIContent label, string leftText, string rightText)
         {
             EditorGUILayout.Slider(prop, min, max, label);
-            
+
             var rect = GUILayoutUtility.GetRect(GUIContent.none, EditorStyles.miniLabel, GUILayout.Height(12));
-            
+
             var oldIndent = EditorGUI.indentLevel;
-            EditorGUI.indentLevel = 0; 
+            EditorGUI.indentLevel = 0;
 
             var startX = rect.x + EditorGUIUtility.labelWidth - (oldIndent * 15f);
             var sliderWidth = rect.width - EditorGUIUtility.labelWidth - EditorGUIUtility.fieldWidth + (oldIndent * 15f) - 5f;
@@ -238,9 +289,9 @@ namespace UniCore.Editor.Audio
             {
                 var leftStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.UpperLeft, fontSize = 9 };
                 var rightStyle = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.UpperRight, fontSize = 9 };
-                
+
                 leftStyle.normal.textColor = rightStyle.normal.textColor = new Color(0.6f, 0.6f, 0.6f, 1f);
-                
+
                 GUI.Label(new Rect(startX, rect.y - 2, sliderWidth / 2, rect.height), leftText, leftStyle);
                 GUI.Label(new Rect(startX + sliderWidth / 2, rect.y - 2, sliderWidth / 2, rect.height), rightText, rightStyle);
             }
@@ -252,13 +303,17 @@ namespace UniCore.Editor.Audio
         private static void DrawConfigSection(string title, Action drawContent)
         {
             EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            EditorGUILayout.Space(2);
+
+            EditorGUILayout.BeginVertical(new GUIStyle("helpbox"));
+
             EditorGUILayout.Space(5);
             drawContent?.Invoke();
             EditorGUILayout.Space(5);
             EditorGUILayout.EndVertical();
             EditorGUILayout.Space(5);
         }
-        
+
         private static void DrawNodeTreeRecursive(SerializedProperty nodeProp, SerializedProperty parentListProp, int indexInParent, int depth)
         {
             if (nodeProp == null) return;
@@ -332,7 +387,7 @@ namespace UniCore.Editor.Audio
 
             if (nodeProp.isExpanded)
             {
-                DrawNodeSpecificProperties(nodeProp, depth);
+                DrawNodeSpecificProperties(nodeProp, depth, isDirection);
 
                 if (isDirection)
                 {
@@ -349,12 +404,59 @@ namespace UniCore.Editor.Audio
             }
         }
 
-        private static void DrawNodeSpecificProperties(SerializedProperty nodeProp, int depth)
+        private static void DrawCompactBaseSettings(SerializedProperty maxInstProp, SerializedProperty releaseDelayProp)
+        {
+            EditorGUILayout.BeginHorizontal();
+
+            GUILayout.Label(new GUIContent("Max Inst", "Giới hạn số luồng âm thanh phát cùng lúc"), GUILayout.Width(55));
+            var val1 = maxInstProp.intValue;
+            var toggle1 = EditorGUILayout.Toggle(val1 > 0, GUILayout.Width(15));
+
+            if (toggle1)
+            {
+                if (val1 <= 0) val1 = 1;
+                maxInstProp.intValue = EditorGUILayout.IntField(val1, GUILayout.Width(30));
+            }
+            else
+            {
+                maxInstProp.intValue = 0;
+                var disabledStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = Color.gray } };
+                GUILayout.Label("Tắt", disabledStyle, GUILayout.Width(30));
+            }
+
+            GUILayout.Space(15);
+
+            GUILayout.Label(new GUIContent("Release", "Thời gian chờ xả RAM sau khi phát xong (0 = Xả ngay)"), GUILayout.Width(50));
+            var val2 = releaseDelayProp.floatValue;
+            var toggle2 = EditorGUILayout.Toggle(val2 > 0f, GUILayout.Width(15));
+
+            if (toggle2)
+            {
+                if (val2 <= 0f) val2 = 15f;
+                releaseDelayProp.floatValue = EditorGUILayout.FloatField(val2, GUILayout.Width(30));
+                GUILayout.Label("s", EditorStyles.miniLabel, GUILayout.Width(10));
+            }
+            else
+            {
+                releaseDelayProp.floatValue = 0f;
+                var disabledStyle = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = Color.gray } };
+                GUILayout.Label("Ngay", disabledStyle, GUILayout.Width(40));
+            }
+
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private static void DrawNodeSpecificProperties(SerializedProperty nodeProp, int depth, bool isDirection)
         {
             var iterator = nodeProp.Copy();
             var endProperty = iterator.GetEndProperty();
             var enterChildren = true;
             var hasDrawnProperties = false;
+
+            var maxInstProp = nodeProp.FindPropertyRelative("m_maxInstances");
+            var releaseDelayProp = nodeProp.FindPropertyRelative("m_releaseDelay");
+            var drawBaseSettings = !isDirection && maxInstProp != null && releaseDelayProp != null;
 
             while (iterator.NextVisible(enterChildren))
             {
@@ -362,22 +464,69 @@ namespace UniCore.Editor.Audio
                 enterChildren = false;
 
                 if (iterator.name == "m_nodeName" || iterator.name == "m_children") continue;
+                if (iterator.name == "m_maxInstances" || iterator.name == "m_releaseDelay") continue;
 
                 if (!hasDrawnProperties)
                 {
                     hasDrawnProperties = true;
                     EditorGUILayout.BeginHorizontal();
-
                     GUILayout.Space((depth + 1) * 15 + 22);
-
-                    var boxStyle = new GUIStyle("helpbox") { padding = new RectOffset(5, 5, 5, 5) };
+                    var boxStyle = new GUIStyle("helpbox") { padding = new RectOffset(10, 10, 10, 10) };
                     EditorGUILayout.BeginVertical(boxStyle);
+
+                    if (drawBaseSettings)
+                    {
+                        DrawCompactBaseSettings(maxInstProp, releaseDelayProp);
+                        EditorGUILayout.Space(5);
+                        drawBaseSettings = false;
+                    }
+                }
+
+                var isAudioRef = iterator.type == "AudioClipReference";
+                if (isAudioRef)
+                {
+                    EditorGUILayout.BeginHorizontal();
                 }
 
                 EditorGUILayout.PropertyField(iterator, true);
+
+                if (isAudioRef)
+                {
+                    var guidProp = iterator.FindPropertyRelative("m_AssetGUID");
+                    if (guidProp != null && !string.IsNullOrEmpty(guidProp.stringValue))
+                    {
+                        if (GUILayout.Button(EditorGUIUtility.IconContent("PlayButton"), EditorStyles.miniButton, GUILayout.Width(25), GUILayout.Height(18)))
+                        {
+                            var path = AssetDatabase.GUIDToAssetPath(guidProp.stringValue);
+                            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+                            PlayEditorAudio(clip);
+                        }
+
+                        if (GUILayout.Button(EditorGUIUtility.IconContent("PreMatQuad"), EditorStyles.miniButton, GUILayout.Width(25), GUILayout.Height(18)))
+                        {
+                            StopEditorAudio();
+                        }
+                    }
+
+                    EditorGUILayout.EndHorizontal();
+                }
+
+                if (!isAudioRef) EditorGUILayout.Space(2);
             }
 
-            if (hasDrawnProperties)
+            if (drawBaseSettings)
+            {
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space((depth + 1) * 15 + 22);
+                var boxStyle = new GUIStyle("helpbox") { padding = new RectOffset(10, 10, 10, 10) };
+                EditorGUILayout.BeginVertical(boxStyle);
+
+                DrawCompactBaseSettings(maxInstProp, releaseDelayProp);
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndHorizontal();
+            }
+            else if (hasDrawnProperties)
             {
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndHorizontal();

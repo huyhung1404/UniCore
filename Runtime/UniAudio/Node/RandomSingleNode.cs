@@ -17,7 +17,7 @@ namespace UniCore.Audio.Node
             Sequential,
         }
 
-        [SerializeField] private SequenceMode _sequenceMode = SequenceMode.RandomNoImmediateRepeat;
+        [SerializeField] private SequenceMode m_sequenceMode = SequenceMode.RandomNoImmediateRepeat;
         private int _nextClipToPlay = -1;
         private int _lastClipPlayed = -1;
 
@@ -25,15 +25,28 @@ namespace UniCore.Audio.Node
         {
             var data = ClipDataPool.Pop();
             var reference = GetNextClip();
-            data.Clips.Add(await reference.LoadAsync());
+            var clip = await reference.LoadAsync();
+
+            if (clip != null)
+            {
+                data.Commands.Add(new ClipPlayCommand
+                {
+                    Clip = clip,
+                    Delay = 0f,
+                    Reference = reference,
+                    ReleaseDelay = ReleaseDelay
+                });
+            }
+            
             return data;
         }
 
         public override (Log, string) IsValid()
         {
             if (string.IsNullOrEmpty(NodeName)) return (Log.Error, "Node name is empty.");
-            if (_references == null) return (Log.Error, "References is null.");
-            if (_references.Length == 0) return (Log.Error, "References is empty.");
+            if (_references == null) return (Log.Error, "References array is null.");
+            if (_references.Length == 0) return (Log.Error, "References array is empty.");
+            
             for (var index = 0; index < _references.Length; index++)
             {
                 var refClip = _references[index];
@@ -49,11 +62,11 @@ namespace UniCore.Audio.Node
 
             if (_nextClipToPlay == -1)
             {
-                _nextClipToPlay = _sequenceMode == SequenceMode.Sequential ? 0 : Random.Range(0, _references.Length);
+                _nextClipToPlay = m_sequenceMode == SequenceMode.Sequential ? 0 : Random.Range(0, _references.Length);
             }
             else
             {
-                switch (_sequenceMode)
+                switch (m_sequenceMode)
                 {
                     default:
                     case SequenceMode.Random:
