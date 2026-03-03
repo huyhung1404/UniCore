@@ -59,6 +59,17 @@ namespace UniCore.Signal
             if (s_Listeners.TryGetValue(typeof(T), out var raw))
                 await ((ListenerList<T>)raw).DispatchAsync(signal, scope);
         }
+        
+        public static async ValueTask DispatchParallelAsync<T>(T signal) where T : ISignalEvent 
+            => await DispatchParallelAsync(signal, signal.Scope);
+
+        public static async ValueTask DispatchParallelAsync<T>(T signal, SignalScope scope) where T : ISignalEvent
+        {
+            if (s_Listeners.TryGetValue(typeof(T), out var raw))
+            {
+                await ((ListenerList<T>)raw).DispatchParallelAsync(signal, scope);
+            }
+        }
 
         public static void ReleaseEmptyLists()
         {

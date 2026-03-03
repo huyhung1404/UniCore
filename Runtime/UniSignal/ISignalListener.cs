@@ -12,7 +12,9 @@
         /// Lower values are executed later.
         /// </summary>
         public int Priority => 0;
+
         public SignalScope ListenScope => SignalScope.All;
+        public bool IsOneShot => false;
         public void OnSignal(T signal);
     }
 }

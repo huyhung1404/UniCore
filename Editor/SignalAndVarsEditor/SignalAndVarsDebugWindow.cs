@@ -211,7 +211,7 @@ namespace UniCore.Editor.Windows
                     for (var i = 0; i < list.Count; i++)
                     {
                         var listener = list.Get(i);
-                        if (!PassFilter(listener)) continue;
+                        if (!PassFilter(listener, signalType)) continue;
 
                         DrawListener(signalType, listener, drawIndex);
                         drawIndex++;
@@ -225,7 +225,7 @@ namespace UniCore.Editor.Windows
             EditorGUILayout.EndVertical();
         }
 
-        private bool PassFilter(object listener)
+        private bool PassFilter(object listener, Type signalType)
         {
             if (!string.IsNullOrEmpty(_listenerFilter))
             {
@@ -253,7 +253,7 @@ namespace UniCore.Editor.Windows
                 if (!itf.IsGenericType || itf.GetGenericTypeDefinition() != typeof(ISignalListener<>)) continue;
                 var scope = itf.GetProperty("ListenScope")?.GetValue(listener);
                 if (scope == null) return false;
-                var value = SignalScopeRegistry.GetReadableScope((SignalScope)scope);
+                var value = SignalDebugUtil.GetScopeText(listener, signalType);
                 if (!value.Contains(_scopeFilter, StringComparison.OrdinalIgnoreCase))
                     return false;
             }
@@ -263,7 +263,7 @@ namespace UniCore.Editor.Windows
 
         private static void DrawListener(Type signalType, object listener, int index)
         {
-            var priority = GetListenerPriority(listener);
+            var priority = SignalDebugUtil.GetPriority(listener, signalType);
             var priorityColor = GetPriorityColor(priority);
 
             var listenerName = listener.GetType().Name;
@@ -361,21 +361,6 @@ namespace UniCore.Editor.Windows
 
                 return;
             }
-        }
-
-        private static int GetListenerPriority(object listener)
-        {
-            foreach (var itf in listener.GetType().GetInterfaces())
-            {
-                if (!itf.IsGenericType ||
-                    itf.GetGenericTypeDefinition() != typeof(ISignalListener<>))
-                    continue;
-
-                var prop = itf.GetProperty("Priority");
-                if (prop != null) return (int)prop.GetValue(listener);
-            }
-
-            return 0;
         }
 
         private static Color GetPriorityColor(int priority)

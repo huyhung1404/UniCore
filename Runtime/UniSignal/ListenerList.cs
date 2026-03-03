@@ -16,10 +16,10 @@ namespace UniCore.Signal
     internal sealed class ListenerList<T> : IListenerList where T : ISignalEvent
     {
         private readonly List<ISignalListener<T>> _list = new(8);
-        
+
         private List<ISignalListener<T>> _pendingAdds;
         private List<ISignalListener<T>> _pendingRemoves;
-        
+
         private bool _isDispatching;
 
         public int Count => _list.Count;
@@ -42,7 +42,7 @@ namespace UniCore.Signal
             var p = listener.Priority;
             var i = _list.Count;
             _list.Add(listener);
-            
+
             while (i > 0 && _list[i - 1].Priority < p)
             {
                 _list[i] = _list[i - 1];
@@ -55,39 +55,38 @@ namespace UniCore.Signal
         public void Remove(object o)
         {
             var listener = (ISignalListener<T>)o;
-            
+
             if (_isDispatching)
             {
                 _pendingRemoves ??= new List<ISignalListener<T>>(4);
                 if (!_pendingRemoves.Contains(listener)) _pendingRemoves.Add(listener);
                 return;
             }
-            
+
             _list.Remove(listener);
         }
 
         public void Dispatch(T signal, SignalScope scope)
         {
             _isDispatching = true;
-            var c = _list.Count;
+            var consumable = signal as IConsumableSignal;
+            var count = _list.Count;
 
-            for (var i = 0; i < c; i++)
+            for (var i = 0; i < count; i++)
             {
                 var listener = _list[i];
-                
                 if (_pendingRemoves != null && _pendingRemoves.Contains(listener)) continue;
                 if (!listener.ListenScope.Intersects(scope)) continue;
+                if (consumable != null && consumable.IsConsumed) break;
 
                 try
                 {
                     listener.OnSignal(signal);
+                    if (listener.IsOneShot) Remove(listener);
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError(
-                        $"[UniSignal] Exception in {listener.GetType().Name} " +
-                        $"while handling {typeof(T).Name}\n{ex}"
-                    );
+                    Debug.LogException(ex);
                 }
             }
 
@@ -98,14 +97,16 @@ namespace UniCore.Signal
         public async ValueTask DispatchAsync(T signal, SignalScope scope)
         {
             _isDispatching = true;
+            var consumable = signal as IConsumableSignal;
             var count = _list.Count;
 
             for (var i = 0; i < count; i++)
             {
                 var listener = _list[i];
-                
+
                 if (_pendingRemoves != null && _pendingRemoves.Contains(listener)) continue;
                 if (!listener.ListenScope.Intersects(scope)) continue;
+                if (consumable != null && consumable.IsConsumed) break;
 
                 try
                 {
@@ -116,14 +117,44 @@ namespace UniCore.Signal
                     else
                     {
                         listener.OnSignal(signal);
+                        if (listener.IsOneShot) Remove(listener);
                     }
                 }
-                catch (System.Exception ex)
+                catch (Exception ex)
                 {
                     Debug.LogError($"[UniSignal] Async Exception: {ex}");
                 }
             }
 
+            _isDispatching = false;
+            ApplyPendingModifications();
+        }
+
+        public async ValueTask DispatchParallelAsync(T signal, SignalScope scope)
+        {
+            _isDispatching = true;
+            var count = _list.Count;
+            var taskList = new List<Task>(count);
+
+            for (var i = 0; i < count; i++)
+            {
+                var listener = _list[i];
+                if (_pendingRemoves != null && _pendingRemoves.Contains(listener)) continue;
+                if (!listener.ListenScope.Intersects(scope)) continue;
+
+                if (listener is IAsyncSignalListener<T> asyncListener)
+                {
+                    taskList.Add(asyncListener.OnSignalAsync(signal).AsTask());
+                }
+                else
+                {
+                    listener.OnSignal(signal);
+                }
+
+                if (listener.IsOneShot) Remove(listener);
+            }
+
+            await Task.WhenAll(taskList);
             _isDispatching = false;
             ApplyPendingModifications();
         }
