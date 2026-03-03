@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+#if SIGNAL_THREAD_SAFE
+using System.Threading;
+#endif
 
 namespace UniCore.Signal
 {
@@ -24,131 +26,141 @@ namespace UniCore.Signal
         private readonly List<ISignalListener<T>> _list = new(8);
         private readonly List<ISignalListener<T>> _pendingAdds = new(4);
 
+#if SIGNAL_THREAD_SAFE
         private int _spinLockIndicator;
-        private int _dispatchCount;
         private volatile bool _needsCleanup;
+#else
+        private bool _needsCleanup;
+#endif
+        private int _dispatchCount;
 
         public ListenerList()
         {
             SignalCache<T>.s_list = this;
         }
 
+#if SIGNAL_THREAD_SAFE
         private void EnterWriteLock(ref SpinWait spinWait)
         {
-            while (Interlocked.CompareExchange(ref _spinLockIndicator, 1, 0) != 0)
-            {
-                spinWait.SpinOnce();
-            }
+            while (Interlocked.CompareExchange(ref _spinLockIndicator, 1, 0) != 0) spinWait.SpinOnce();
         }
 
         private void ExitWriteLock()
         {
             Volatile.Write(ref _spinLockIndicator, 0);
         }
+#endif
 
         public void DestroyCache()
         {
             SignalCache<T>.s_list = null;
 
+#if SIGNAL_THREAD_SAFE
             var spinWait = new SpinWait();
             EnterWriteLock(ref spinWait);
             try
             {
-                _list.Clear();
-                _pendingAdds.Clear();
-                _needsCleanup = false;
+#endif
+            _list.Clear();
+            _pendingAdds.Clear();
+            _needsCleanup = false;
+#if SIGNAL_THREAD_SAFE
             }
-            finally
-            {
-                ExitWriteLock();
-            }
+            finally { ExitWriteLock(); }
+#endif
         }
 
         public int Count
         {
             get
             {
+#if SIGNAL_THREAD_SAFE
                 var spinWait = new SpinWait();
                 EnterWriteLock(ref spinWait);
-                try
-                {
-                    return _list.Count;
-                }
-                finally
-                {
-                    ExitWriteLock();
-                }
+                try { return _list.Count; }
+                finally { ExitWriteLock(); }
+#else
+                return _list.Count;
+#endif
             }
         }
 
         public object Get(int index)
         {
+#if SIGNAL_THREAD_SAFE
             var spinWait = new SpinWait();
             EnterWriteLock(ref spinWait);
-            try
-            {
-                return _list[index];
-            }
-            finally
-            {
-                ExitWriteLock();
-            }
+            try { return _list[index]; }
+            finally { ExitWriteLock(); }
+#else
+            return _list[index];
+#endif
         }
 
         public void Add(object o)
         {
             var listener = (ISignalListener<T>)o;
-            var spinWait = new SpinWait();
 
+#if SIGNAL_THREAD_SAFE
+            var spinWait = new SpinWait();
             EnterWriteLock(ref spinWait);
             try
             {
-                if (_list.Contains(listener) || _pendingAdds.Contains(listener)) return;
+#endif
+            if (_list.Contains(listener) || _pendingAdds.Contains(listener)) return;
 
+#if SIGNAL_THREAD_SAFE
                 if (Volatile.Read(ref _dispatchCount) > 0)
-                {
-                    _pendingAdds.Add(listener);
-                    _needsCleanup = true;
-                }
-                else
-                {
-                    InsertSorted(listener);
-                }
-            }
-            finally
+#else
+            if (_dispatchCount > 0)
+#endif
             {
-                ExitWriteLock();
+                _pendingAdds.Add(listener);
+                _needsCleanup = true;
             }
+            else
+            {
+                InsertSorted(listener);
+            }
+#if SIGNAL_THREAD_SAFE
+            }
+            finally { ExitWriteLock(); }
+#endif
         }
 
         public void Remove(object o)
         {
             var listener = (ISignalListener<T>)o;
-            var spinWait = new SpinWait();
 
+#if SIGNAL_THREAD_SAFE
+            var spinWait = new SpinWait();
             EnterWriteLock(ref spinWait);
             try
             {
-                var idx = _list.IndexOf(listener);
-                if (idx >= 0)
-                {
-                    _list[idx] = null;
-                    _needsCleanup = true;
-                }
-                else
-                {
-                    _pendingAdds.Remove(listener);
-                }
-            }
-            finally
+#endif
+            var idx = _list.IndexOf(listener);
+            if (idx >= 0)
             {
-                ExitWriteLock();
+                _list[idx] = null;
+                _needsCleanup = true;
             }
+            else
+            {
+                _pendingAdds.Remove(listener);
+            }
+#if SIGNAL_THREAD_SAFE
+            }
+            finally { ExitWriteLock(); }
+#endif
         }
 
         public void Dispatch(T signal, SignalScope scope)
         {
+#if SIGNAL_THREAD_SAFE
             Interlocked.Increment(ref _dispatchCount);
+#else
+            _dispatchCount++;
+#endif
             var consumable = signal as IConsumableSignal;
             var count = _list.Count;
 
@@ -170,48 +182,41 @@ namespace UniCore.Signal
                 }
             }
 
+#if SIGNAL_THREAD_SAFE
             if (Interlocked.Decrement(ref _dispatchCount) == 0 && _needsCleanup)
             {
                 var spinWait = new SpinWait();
                 EnterWriteLock(ref spinWait);
-                try
-                {
-                    if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications();
-                }
-                finally
-                {
-                    ExitWriteLock();
-                }
+                try { if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications(); }
+                finally { ExitWriteLock(); }
             }
+#else
+            _dispatchCount--;
+            if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications();
+#endif
         }
 
         public async ValueTask DispatchAsync(T signal, SignalScope scope)
         {
+#if SIGNAL_THREAD_SAFE
             Interlocked.Increment(ref _dispatchCount);
-
+#else
+            _dispatchCount++;
+#endif
             var consumable = signal as IConsumableSignal;
-
             var count = _list.Count;
 
             for (var i = 0; i < count; i++)
             {
                 var listener = _list[i];
-
                 if (listener == null) continue;
-
                 if (!listener.ListenScope.Intersects(scope)) continue;
                 if (consumable != null && consumable.IsConsumed) break;
 
                 try
                 {
-                    if (listener is IAsyncSignalListener<T> asyncListener)
-                    {
-                        await asyncListener.OnSignalAsync(signal);
-                    }
-                    else
-                    {
-                        listener.OnSignal(signal);
-                    }
+                    if (listener is IAsyncSignalListener<T> asyncListener) await asyncListener.OnSignalAsync(signal);
+                    else listener.OnSignal(signal);
 
                     if (listener.IsOneShot) Remove(listener);
                 }
@@ -221,29 +226,36 @@ namespace UniCore.Signal
                 }
             }
 
+#if SIGNAL_THREAD_SAFE
             if (Interlocked.Decrement(ref _dispatchCount) == 0 && _needsCleanup)
             {
                 var spinWait = new SpinWait();
                 EnterWriteLock(ref spinWait);
-                try
-                {
-                    if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications();
-                }
-                finally
-                {
-                    ExitWriteLock();
-                }
+                try { if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications(); }
+                finally { ExitWriteLock(); }
             }
+#else
+            _dispatchCount--;
+            if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications();
+#endif
         }
 
         public async ValueTask DispatchParallelAsync(T signal, SignalScope scope)
         {
+#if SIGNAL_THREAD_SAFE
             Interlocked.Increment(ref _dispatchCount);
-
+#else
+            _dispatchCount++;
+#endif
             var count = _list.Count;
+
             if (count == 0)
             {
+#if SIGNAL_THREAD_SAFE
                 Interlocked.Decrement(ref _dispatchCount);
+#else
+                _dispatchCount--;
+#endif
                 return;
             }
 
@@ -253,20 +265,13 @@ namespace UniCore.Signal
             for (var i = 0; i < count; i++)
             {
                 var listener = _list[i];
-
                 if (listener == null) continue;
                 if (!listener.ListenScope.Intersects(scope)) continue;
 
                 try
                 {
-                    if (listener is IAsyncSignalListener<T> asyncListener)
-                    {
-                        taskList[taskCount++] = asyncListener.OnSignalAsync(signal).AsTask();
-                    }
-                    else
-                    {
-                        listener.OnSignal(signal);
-                    }
+                    if (listener is IAsyncSignalListener<T> asyncListener) taskList[taskCount++] = asyncListener.OnSignalAsync(signal).AsTask();
+                    else listener.OnSignal(signal);
 
                     if (listener.IsOneShot) Remove(listener);
                 }
@@ -283,19 +288,18 @@ namespace UniCore.Signal
                 await Task.WhenAll(tasksToWait);
             }
 
+#if SIGNAL_THREAD_SAFE
             if (Interlocked.Decrement(ref _dispatchCount) == 0 && _needsCleanup)
             {
                 var spinWait = new SpinWait();
                 EnterWriteLock(ref spinWait);
-                try
-                {
-                    if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications();
-                }
-                finally
-                {
-                    ExitWriteLock();
-                }
+                try { if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications(); }
+                finally { ExitWriteLock(); }
             }
+#else
+            _dispatchCount--;
+            if (_dispatchCount == 0 && _needsCleanup) ApplyPendingModifications();
+#endif
         }
 
         private void ApplyPendingModifications()
@@ -312,10 +316,7 @@ namespace UniCore.Signal
                 }
             }
 
-            if (aliveCount < currentCount)
-            {
-                _list.RemoveRange(aliveCount, currentCount - aliveCount);
-            }
+            if (aliveCount < currentCount) _list.RemoveRange(aliveCount, currentCount - aliveCount);
 
             var pendingCount = _pendingAdds.Count;
             if (pendingCount > 0)

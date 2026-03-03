@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace UniCore.Vars
 {
-    public sealed class VariableStore
+    public class VariableStore
     {
         private readonly Dictionary<int, IVariable> _vars = new Dictionary<int, IVariable>(32);
 

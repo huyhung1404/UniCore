@@ -94,10 +94,10 @@ namespace UniCore.Editor.Windows.Testing
             var audioController = new MockAudioController();
             SignalSystem.Register(audioController);
 
-            Vars.VarsSystem.Global.Define("PlayerHealth", 100, true);
-            Vars.VarsSystem.Global.Define("PlayerName", "Hero", true);
-            Vars.VarsSystem.Global.Define("IsGameOver", false, true);
-            Vars.VarsSystem.Global.Define("Player", new PlayerVar(), true);
+            Vars.VarsSystem.Store.Define("PlayerHealth", 100, true);
+            Vars.VarsSystem.Store.Define("PlayerName", "Hero", true);
+            Vars.VarsSystem.Store.Define("IsGameOver", false, true);
+            Vars.VarsSystem.Store.Define("Player", new PlayerVar(), true);
         }
     }
 }

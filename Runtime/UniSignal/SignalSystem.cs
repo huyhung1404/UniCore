@@ -1,4 +1,6 @@
-﻿using System;
+﻿// #define SIGNAL_THREAD_SAFE
+
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -13,9 +15,11 @@ namespace UniCore.Signal
     public static class SignalSystem
     {
         internal static readonly List<IListenerList> s_ActiveLists = new(32);
-        private static readonly object s_clearLock = new object();
-        
         private static Dictionary<Type, object> s_pools;
+
+#if SIGNAL_THREAD_SAFE
+        private static readonly object s_lock = new object();
+#endif
 
         public static void Register<T>(ISignalListener<T> listener) where T : ISignalEvent
         {
@@ -24,13 +28,14 @@ namespace UniCore.Signal
             {
                 list = new ListenerList<T>();
 
-                lock (s_clearLock)
+#if SIGNAL_THREAD_SAFE
+                lock (s_lock)
                 {
-                    if (!s_ActiveLists.Contains(list))
-                    {
-                        s_ActiveLists.Add(list);
-                    }
+                    if (!s_ActiveLists.Contains(list)) s_ActiveLists.Add(list);
                 }
+#else
+                if (!s_ActiveLists.Contains(list)) s_ActiveLists.Add(list);
+#endif
             }
 
             list.Add(listener);
@@ -41,14 +46,6 @@ namespace UniCore.Signal
             SignalCache<T>.s_list?.Remove(listener);
         }
 
-        /// <summary>
-        /// Registers a listener using Reflection. 
-        /// </summary>
-        /// <remarks>
-        /// <para><c>PERFORMANCE WARNING:</c></para>
-        /// This method uses <c>MethodInfo.Invoke</c> which allocates an <c>object[]</c> array on the Heap, causing GC spikes.
-        /// It should ONLY be used for Editor tooling or one-time initialization. For gameplay logic, use <see cref="Register{T}(ISignalListener{T})"/> instead.
-        /// </remarks>
         [Obsolete("Performance Warning: Use the generic Register<T>(listener) instead for Zero-GC O(1) performance.", false)]
         internal static void Register(Type signalType, object listener)
         {
@@ -56,14 +53,6 @@ namespace UniCore.Signal
             method?.Invoke(null, new[] { listener });
         }
 
-        /// <summary>
-        /// Unregister a listener using Reflection. 
-        /// </summary>
-        /// <remarks>
-        /// <para><c>PERFORMANCE WARNING:</c></para>
-        /// This method uses <c>MethodInfo.Invoke</c> which allocates an <c>object[]</c> array on the Heap, causing GC spikes.
-        /// It should ONLY be used for Editor tooling or one-time initialization. For gameplay logic, use <see cref="Register{T}(ISignalListener{T})"/> instead.
-        /// </remarks>
         [Obsolete("Performance Warning: Use the generic Register<T>(listener) instead for Zero-GC O(1) performance.", false)]
         internal static void Unregister(Type signalType, object listener)
         {
@@ -79,15 +68,11 @@ namespace UniCore.Signal
             for (var i = 0; i < length; i++)
             {
                 var m = methods[i];
-                if (m.Name == methodName && m.IsGenericMethod)
-                {
-                    return m.MakeGenericMethod(genericType);
-                }
+                if (m.Name == methodName && m.IsGenericMethod) return m.MakeGenericMethod(genericType);
             }
 
             return null;
         }
-
 
         public static void Dispatch<T>(T signal) where T : ISignalEvent => Dispatch(signal, signal.Scope);
 
@@ -114,34 +99,42 @@ namespace UniCore.Signal
 
         public static void ReleaseEmptyLists()
         {
-            lock (s_clearLock)
+#if SIGNAL_THREAD_SAFE
+            lock (s_lock)
             {
-                for (var i = s_ActiveLists.Count - 1; i >= 0; i--)
-                {
-                    var list = s_ActiveLists[i];
-                    if (list.Count != 0) continue;
-                    list.DestroyCache();
-                    s_ActiveLists.RemoveAt(i);
-                }
+#endif
+            for (var i = s_ActiveLists.Count - 1; i >= 0; i--)
+            {
+                var list = s_ActiveLists[i];
+                if (list.Count != 0) continue;
+                list.DestroyCache();
+                s_ActiveLists.RemoveAt(i);
             }
+#if SIGNAL_THREAD_SAFE
+            }
+#endif
         }
 
         public static void Clear()
         {
-            lock (s_clearLock)
+#if SIGNAL_THREAD_SAFE
+            lock (s_lock)
             {
-                var count = s_ActiveLists.Count;
-                for (var i = 0; i < count; i++)
-                {
-                    s_ActiveLists[i].DestroyCache();
-                }
-
-                s_ActiveLists.Clear();
+#endif
+            var count = s_ActiveLists.Count;
+            for (var i = 0; i < count; i++) s_ActiveLists[i].DestroyCache();
+            s_ActiveLists.Clear();
+#if SIGNAL_THREAD_SAFE
             }
+#endif
         }
 
         public static T Get<T>() where T : IPoolableSignal, new()
         {
+#if SIGNAL_THREAD_SAFE
+            lock (s_lock)
+            {
+#endif
             var type = typeof(T);
             s_pools ??= new Dictionary<Type, object>(16);
             if (!s_pools.TryGetValue(type, out var poolObj))
@@ -152,10 +145,17 @@ namespace UniCore.Signal
 
             var pool = (Stack<T>)poolObj;
             return pool.Count > 0 ? pool.Pop() : new T();
+#if SIGNAL_THREAD_SAFE
+            }
+#endif
         }
 
         public static void Release<T>(T signal) where T : IPoolableSignal
         {
+#if SIGNAL_THREAD_SAFE
+            lock (s_lock)
+            {
+#endif
             var type = typeof(T);
             s_pools ??= new Dictionary<Type, object>(16);
             if (s_pools.TryGetValue(type, out var poolObj))
@@ -163,6 +163,9 @@ namespace UniCore.Signal
                 signal.OnRelease();
                 ((Stack<T>)poolObj).Push(signal);
             }
+#if SIGNAL_THREAD_SAFE
+            }
+#endif
         }
     }
 }
