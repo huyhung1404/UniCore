@@ -13,7 +13,7 @@ namespace UniCore.Audio
     public class SoundEmitter : MonoBehaviour, 
         ISignalListener<StopSoundSignal>, 
         ISignalListener<ChangeSoundSignal>,
-        ISignalListener<ChangeLayerVolumeSignal> // [MỚI]
+        ISignalListener<ChangeLayerVolumeSignal>
     {
         private AudioSource _source;
         private int? _configHash;
@@ -58,7 +58,6 @@ namespace UniCore.Audio
             var basePitch = configuration?.Pitch ?? 1f;
             var pitchVar = configuration?.PitchVariance ?? 0f;
 
-            // [MỚI] Tách bạch Base Volume và Layer Volume
             _baseConfigVolume = Mathf.Clamp01(baseVol + Random.Range(-volVar, volVar));
             _layerVolumeMultiplier = command.LayerVolume;
 
@@ -147,7 +146,6 @@ namespace UniCore.Audio
             NotifyBeingFinish();
         }
 
-        // [MỚI] Bắt tín hiệu đổi Volume của Layer
         public void OnSignal(ChangeLayerVolumeSignal signal)
         {
             if (signal.SoundId != _soundId || signal.LayerIndex != _currentCommand.LayerIndex) return;
@@ -195,8 +193,14 @@ namespace UniCore.Audio
             var currentSoundId = _soundId;
             var node = AudioSystem.s_Instance.SearchSystem.FindNode(clipAddress.AsSpan());
             if (node == null) return;
+            
+            var tempSignal = new PlaySoundSignal
+            {
+                SoundId = currentSoundId,
+                NodePath = clipAddress
+            };
 
-            var clipData = await node.GetClipData();
+            var clipData = await node.GetClipData(tempSignal);
             
             if (clipData == null || currentSoundId != _soundId)
             {
@@ -268,7 +272,7 @@ namespace UniCore.Audio
         {
             SignalSystem.Register<StopSoundSignal>(this);
             SignalSystem.Register<ChangeSoundSignal>(this);
-            SignalSystem.Register<ChangeLayerVolumeSignal>(this); // Đăng ký bắt Volume Layer
+            SignalSystem.Register<ChangeLayerVolumeSignal>(this);
         }
 
         private void OnDisable()

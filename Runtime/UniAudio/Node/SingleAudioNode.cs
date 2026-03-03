@@ -11,7 +11,7 @@ namespace UniCore.Audio.Node
     {
         [SerializeField] private AudioClipReference m_reference;
 
-        public override async UniTask<ClipData> GetClipData()
+        public override async UniTask<ClipData> GetClipData(PlaySoundSignal signal)
         {
             var data = ClipDataPool.Pop();
             var clip = await m_reference.LoadAsync();

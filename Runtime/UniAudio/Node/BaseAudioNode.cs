@@ -29,7 +29,7 @@ namespace UniCore.Audio.Node
             return this;
         }
 
-        public abstract UniTask<ClipData> GetClipData();
+        public abstract UniTask<ClipData> GetClipData(PlaySoundSignal signal);
         public abstract (Log, string) IsValid();
     }
 }

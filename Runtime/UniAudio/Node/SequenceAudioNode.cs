@@ -18,7 +18,7 @@ namespace UniCore.Audio.Node
 
         [SerializeField] private SequenceItem[] m_items = Array.Empty<SequenceItem>();
 
-        public override async UniTask<ClipData> GetClipData()
+        public override async UniTask<ClipData> GetClipData(PlaySoundSignal signal)
         {
             var data = ClipDataPool.Pop();
 

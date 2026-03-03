@@ -12,7 +12,7 @@ namespace UniCore.Audio.Node
         [SerializeReference] private List<BaseAudioNode> m_children = new List<BaseAudioNode>();
         public List<BaseAudioNode> Children => m_children;
 
-        public override UniTask<ClipData> GetClipData()
+        public override UniTask<ClipData> GetClipData(PlaySoundSignal signal)
         {
             throw new Exception("ContainerNode cannot be played directly.");
         }

@@ -19,7 +19,7 @@ namespace UniCore.Audio.Node
         
         [SerializeField] private LayerItem[] m_layers = Array.Empty<LayerItem>();
 
-        public override async UniTask<ClipData> GetClipData()
+        public override async UniTask<ClipData> GetClipData(PlaySoundSignal signal)
         {
             var data = ClipDataPool.Pop();
             if (m_layers == null || m_layers.Length == 0) return data;

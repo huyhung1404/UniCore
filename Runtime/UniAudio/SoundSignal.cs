@@ -30,6 +30,7 @@ namespace UniCore.Audio
 
         public int? SoundId;
         public float? OverrideReleaseDelay;
+        public int? SwitchKey;
     }
 
     public struct ChangeLayerVolumeSignal : ISignalEvent

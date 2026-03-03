@@ -21,7 +21,7 @@ namespace UniCore.Audio.Node
         private int _nextClipToPlay = -1;
         private int _lastClipPlayed = -1;
 
-        public override async UniTask<ClipData> GetClipData()
+        public override async UniTask<ClipData> GetClipData(PlaySoundSignal signal)
         {
             var data = ClipDataPool.Pop();
             var reference = GetNextClip();

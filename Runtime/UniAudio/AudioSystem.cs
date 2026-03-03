@@ -256,7 +256,7 @@ namespace UniCore.Audio
                 s_Instance.ApplyDuckingAsync(config.DuckingRatio, config.DuckingFadeTime, signal.SoundId).Forget();
             }
 
-            var clipData = await node.GetClipData();
+            var clipData = await node.GetClipData(signal);
 
             if (signal.SoundId.HasValue && !s_Instance._activeSounds.Contains(signal.SoundId.Value))
             {
@@ -277,6 +277,12 @@ namespace UniCore.Audio
             }
 
             ClipDataPool.Push(clipData);
+        }
+        
+        public bool IsSoundActive(int? soundId)
+        {
+            if (!soundId.HasValue) return false;
+            return _activeSounds.Contains(soundId.Value);
         }
     }
 }
