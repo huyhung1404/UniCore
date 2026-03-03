@@ -2,7 +2,8 @@
     "name": "UniVars",
     "rootNamespace": "UniCore.Vars",
     "references": [
-        "UniSignal"
+        "UniSignal",
+        "UniUtilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

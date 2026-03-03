@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UniCore.Audio.Pool;
 using UniCore.Signal;
+using UniCore.Utilities;
 using UnityEngine;
 
 namespace UniCore.Audio
@@ -198,7 +199,7 @@ namespace UniCore.Audio
         {
             if (string.IsNullOrEmpty(signal.NodePath)) return;
             
-            var nodeHash = AudioSearchSystem.CalculateHash(signal.NodePath.AsSpan());
+            var nodeHash = signal.NodePath.GetFNV1aHash();
             var node = SearchSystem?.FindNode(signal.NodePath.AsSpan());
 
             if (node != null && node.MaxInstances > 0)

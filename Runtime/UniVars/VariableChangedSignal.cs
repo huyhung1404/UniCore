@@ -2,9 +2,9 @@ using UniCore.Signal;
 
 namespace UniCore.Vars
 {
-    public class VariableChangedSignal<T> : ISignalEvent
+    public struct VariableChangedSignal<T> : ISignalEvent
     {
-        public string Key;
+        public int Hash;
         public T OldValue;
         public T NewValue;
     }

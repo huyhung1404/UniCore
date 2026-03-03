@@ -440,7 +440,7 @@ namespace UniCore.Editor.Windows
         {
             var type = variable.GetType();
 
-            var keyField = type.GetField("_key", BindingFlags.Instance | BindingFlags.NonPublic);
+            var keyField = type.GetField("_name", BindingFlags.Instance | BindingFlags.NonPublic);
             var valueField = type.GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic);
 
             if (keyField == null || valueField == null) return;

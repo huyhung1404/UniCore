@@ -1,69 +1,47 @@
 using System.Collections.Generic;
+using UniCore.Utilities;
 using UnityEngine;
 
 namespace UniCore.Vars
 {
     public sealed class VariableStore
     {
-        private readonly Dictionary<string, object> _vars;
-
-        public VariableStore()
-        {
-            _vars = new Dictionary<string, object>(16);
-        }
+        private readonly Dictionary<int, IVariable> _vars = new Dictionary<int, IVariable>(32);
 
         public Variable<T> Define<T>(string key, T value, bool replace = false)
         {
-            if (_vars.TryGetValue(key, out var v))
+            var hash = key.GetFNV1aHash();
+            
+            if (!_vars.TryGetValue(hash, out var v))
             {
-                var result = (Variable<T>)v;
-                if (replace)
-                {
-                    result.Set(value);
-                }
-                else
-                {
-                    Debug.LogWarning($"Variable [{key}] is already defined.");
-                }
-
-                return result;
+                var variable = new Variable<T>(hash, value, key);
+                _vars[hash] = variable;
+                return variable;
             }
 
-            var variable = new Variable<T>(key, value);
-            _vars[key] = variable;
-            return variable;
-        }
-
-        public Variable<T> Define<T>(string key, Variable<T> value, bool replace = false)
-        {
-            if (_vars.TryGetValue(key, out var v))
+            if (v is not Variable<T> typedVar)
             {
-                if (!replace)
-                {
-                    Debug.LogWarning($"Variable [{key}] is already defined.");
-                    return (Variable<T>)v;
-                }
+                Debug.LogError($"[VariableStore] Type mismatch for key '{key}'.");
+                return null;
             }
 
-            _vars[key] = value;
-            return value;
+            if (replace) typedVar.Set(value);
+            return typedVar;
         }
 
-        public void Undefine(string key)
+        public Variable<T> Get<T>(int hash)
         {
-            _vars.Remove(key);
-        }
-
-        public Variable<T> Get<T>(string key)
-        {
-            if (_vars.TryGetValue(key, out var v))
-            {
-                return (Variable<T>)v;
-            }
-
+            if (_vars.TryGetValue(hash, out var v)) return v as Variable<T>;
             return null;
         }
+
+        public Variable<T> Get<T>(string key) => Get<T>(key.GetFNV1aHash());
         
-        internal IEnumerable<object> All => _vars.Values;
+        public void ResetAll()
+        {
+            foreach (var v in _vars.Values) v.ResetValue();
+        }
+
+        internal IEnumerable<IVariable> All => _vars.Values;
     }
 }
