@@ -10,7 +10,10 @@ using Random = UnityEngine.Random;
 namespace UniCore.Audio
 {
     [RequireComponent(typeof(AudioSource))]
-    public class SoundEmitter : MonoBehaviour, ISignalListener<StopSoundSignal>, ISignalListener<ChangeSoundSignal>
+    public class SoundEmitter : MonoBehaviour, 
+        ISignalListener<StopSoundSignal>, 
+        ISignalListener<ChangeSoundSignal>,
+        ISignalListener<ChangeLayerVolumeSignal> // [MỚI]
     {
         private AudioSource _source;
         private int? _configHash;
@@ -20,6 +23,9 @@ namespace UniCore.Audio
         
         private ClipPlayCommand _currentCommand;
         private float? _overrideReleaseDelay;
+        
+        private float _baseConfigVolume;
+        private float _layerVolumeMultiplier;
 
 #if UNITY_EDITOR
         public static readonly HashSet<SoundEmitter> ActiveEmitters = new HashSet<SoundEmitter>();
@@ -52,7 +58,11 @@ namespace UniCore.Audio
             var basePitch = configuration?.Pitch ?? 1f;
             var pitchVar = configuration?.PitchVariance ?? 0f;
 
-            _source.volume = Mathf.Clamp01(baseVol + Random.Range(-volVar, volVar));
+            // [MỚI] Tách bạch Base Volume và Layer Volume
+            _baseConfigVolume = Mathf.Clamp01(baseVol + Random.Range(-volVar, volVar));
+            _layerVolumeMultiplier = command.LayerVolume;
+
+            _source.volume = _baseConfigVolume * _layerVolumeMultiplier;
             _source.pitch = Mathf.Clamp(basePitch + Random.Range(-pitchVar, pitchVar), -3f, 3f);
 
             transform.SetParent(signal.Parent, false);
@@ -137,6 +147,36 @@ namespace UniCore.Audio
             NotifyBeingFinish();
         }
 
+        // [MỚI] Bắt tín hiệu đổi Volume của Layer
+        public void OnSignal(ChangeLayerVolumeSignal signal)
+        {
+            if (signal.SoundId != _soundId || signal.LayerIndex != _currentCommand.LayerIndex) return;
+            ChangeLayerVolumeAsync(signal.TargetVolume, signal.FadeTime).Forget();
+        }
+
+        private async UniTaskVoid ChangeLayerVolumeAsync(float targetVolume, float fadeTime)
+        {
+            if (!_source) return;
+            var currentSoundId = _soundId;
+            var startVol = _layerVolumeMultiplier;
+            var t = 0f;
+            
+            while (t < fadeTime && _source && _source.isPlaying)
+            {
+                if (currentSoundId != _soundId) return;
+                t += Time.deltaTime;
+                _layerVolumeMultiplier = Mathf.Lerp(startVol, targetVolume, t / fadeTime);
+                _source.volume = _baseConfigVolume * _layerVolumeMultiplier;
+                await UniTask.Yield();
+            }
+
+            if (currentSoundId == _soundId)
+            {
+                _layerVolumeMultiplier = targetVolume;
+                _source.volume = _baseConfigVolume * _layerVolumeMultiplier;
+            }
+        }
+
         public void OnSignal(StopSoundSignal signal)
         {
             if (signal.SoundId == _soundId) Stop();
@@ -200,6 +240,9 @@ namespace UniCore.Audio
             _currentCommand.Reference?.ReleaseUsage(delay);
             
             _currentCommand = newCommand;
+            _layerVolumeMultiplier = newCommand.LayerVolume;
+            var targetVolume = _baseConfigVolume * _layerVolumeMultiplier;
+            
             _source.clip = newCommand.Clip;
             _source.time = 0f;
             _source.Play();
@@ -214,17 +257,18 @@ namespace UniCore.Audio
                 if (currentSoundId != _soundId) return;
 
                 t += Time.deltaTime;
-                _source.volume = Mathf.Lerp(0f, startVolume, t / fadeInTime);
+                _source.volume = Mathf.Lerp(0f, targetVolume, t / fadeInTime);
                 await UniTask.Yield();
             }
 
-            if (currentSoundId == _soundId) _source.volume = startVolume;
+            if (currentSoundId == _soundId) _source.volume = targetVolume;
         }
 
         private void RegisterSoundEvent()
         {
             SignalSystem.Register<StopSoundSignal>(this);
             SignalSystem.Register<ChangeSoundSignal>(this);
+            SignalSystem.Register<ChangeLayerVolumeSignal>(this); // Đăng ký bắt Volume Layer
         }
 
         private void OnDisable()
@@ -236,6 +280,8 @@ namespace UniCore.Audio
             {
                 SignalSystem.Unregister<StopSoundSignal>(this);
                 SignalSystem.Unregister<ChangeSoundSignal>(this);
+                SignalSystem.Unregister<ChangeLayerVolumeSignal>(this);
+                
                 SignalSystem.Dispatch(new SoundFinishSignal
                 {
                     SoundId = _soundId.Value

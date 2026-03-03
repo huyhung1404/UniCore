@@ -34,7 +34,9 @@ namespace UniCore.Audio.Node
                     Clip = clip,
                     Delay = 0f,
                     Reference = reference,
-                    ReleaseDelay = ReleaseDelay
+                    ReleaseDelay = ReleaseDelay,
+                    LayerIndex = 0,
+                    LayerVolume = 1f
                 });
             }
             
@@ -44,12 +46,12 @@ namespace UniCore.Audio.Node
         public override (Log, string) IsValid()
         {
             if (string.IsNullOrEmpty(NodeName)) return (Log.Error, "Node name is empty.");
-            if (_references == null) return (Log.Error, "References array is null.");
-            if (_references.Length == 0) return (Log.Error, "References array is empty.");
+            if (m_references == null) return (Log.Error, "References array is null.");
+            if (m_references.Length == 0) return (Log.Error, "References array is empty.");
             
-            for (var index = 0; index < _references.Length; index++)
+            for (var index = 0; index < m_references.Length; index++)
             {
-                var refClip = _references[index];
+                var refClip = m_references[index];
                 if (refClip == null || !refClip.RuntimeKeyIsValid()) return (Log.Error, $"[{index}] Reference is invalid.");
             }
 
@@ -58,11 +60,11 @@ namespace UniCore.Audio.Node
 
         private AudioClipReference GetNextClip()
         {
-            if (_references.Length == 1) return _references[0];
+            if (m_references.Length == 1) return m_references[0];
 
             if (_nextClipToPlay == -1)
             {
-                _nextClipToPlay = m_sequenceMode == SequenceMode.Sequential ? 0 : Random.Range(0, _references.Length);
+                _nextClipToPlay = m_sequenceMode == SequenceMode.Sequential ? 0 : Random.Range(0, m_references.Length);
             }
             else
             {
@@ -70,26 +72,26 @@ namespace UniCore.Audio.Node
                 {
                     default:
                     case SequenceMode.Random:
-                        _nextClipToPlay = Random.Range(0, _references.Length);
+                        _nextClipToPlay = Random.Range(0, m_references.Length);
                         break;
 
                     case SequenceMode.RandomNoImmediateRepeat:
                         do
                         {
-                            _nextClipToPlay = Random.Range(0, _references.Length);
+                            _nextClipToPlay = Random.Range(0, m_references.Length);
                         } while (_nextClipToPlay == _lastClipPlayed);
 
                         break;
 
                     case SequenceMode.Sequential:
-                        _nextClipToPlay = (int)Mathf.Repeat(++_nextClipToPlay, _references.Length);
+                        _nextClipToPlay = (int)Mathf.Repeat(++_nextClipToPlay, m_references.Length);
                         break;
                 }
             }
 
             _lastClipPlayed = _nextClipToPlay;
 
-            return _references[_nextClipToPlay];
+            return m_references[_nextClipToPlay];
         }
     }
 }

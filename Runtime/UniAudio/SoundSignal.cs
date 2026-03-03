@@ -31,7 +31,15 @@ namespace UniCore.Audio
         public int? SoundId;
         public float? OverrideReleaseDelay;
     }
-    
+
+    public struct ChangeLayerVolumeSignal : ISignalEvent
+    {
+        public int SoundId;
+        public int LayerIndex;
+        public float TargetVolume;
+        public float FadeTime;
+    }
+
     public struct ChangeSnapshotSignal : ISignalEvent
     {
         public string SnapshotName;

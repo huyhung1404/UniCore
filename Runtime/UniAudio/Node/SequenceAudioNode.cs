@@ -39,7 +39,9 @@ namespace UniCore.Audio.Node
                         Clip = clips[i],
                         Delay = m_items[i].DelayTime,
                         Reference = m_items[i].Reference,
-                        ReleaseDelay = ReleaseDelay
+                        ReleaseDelay = ReleaseDelay,
+                        LayerIndex = 0,
+                        LayerVolume = 1f
                     });
                 }
             }

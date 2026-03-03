@@ -10,6 +10,8 @@ namespace UniCore.Audio
         public float Delay;
         public AudioClipReference Reference;
         public float ReleaseDelay;
+        public int LayerIndex;
+        public float LayerVolume;
     }
     
     public class ClipData

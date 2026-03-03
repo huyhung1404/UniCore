@@ -22,7 +22,9 @@ namespace UniCore.Audio.Node
                     Clip = clip,
                     Delay = 0f,
                     Reference = m_reference,
-                    ReleaseDelay = ReleaseDelay
+                    ReleaseDelay = ReleaseDelay,
+                    LayerIndex = 0,
+                    LayerVolume = 1f
                 });
             }
 
