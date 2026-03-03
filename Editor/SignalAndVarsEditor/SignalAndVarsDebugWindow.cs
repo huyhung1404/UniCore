@@ -74,10 +74,16 @@ namespace UniCore.Editor.Windows
             var signalHeightOption = _drawVariable ? GUILayout.Height(currentSignalHeight) : GUILayout.ExpandHeight(true);
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll, false, false, signalHeightOption);
-            foreach (var kvp in SignalSystem.s_Listeners)
+            
+            var activeLists = SignalSystem.s_ActiveLists;
+            var listCount = activeLists.Count;
+            for (var i = 0; i < listCount; i++)
             {
-                if (!PassSignalFilter(kvp.Key)) continue;
-                DrawSignalType(kvp.Key, kvp.Value);
+                var list = activeLists[i];
+                var signalType = list.SignalType;
+                
+                if (!PassSignalFilter(signalType)) continue;
+                DrawSignalType(signalType, list);
             }
 
             EditorGUILayout.EndScrollView();
@@ -334,7 +340,6 @@ namespace UniCore.Editor.Windows
                 GUILayout.Space(8);
                 DrawListenerScope(listener, s_metaStyle);
 
-                // Đẩy nút Delete dạt ra sát lề phải của hàng thứ 2
                 GUILayout.FlexibleSpace();
 
                 s_deleteIcon.tooltip = "Unregister Listener";
