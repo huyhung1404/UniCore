@@ -6,6 +6,7 @@ namespace UniCore.Signal
     public static class SignalSystem
     {
         internal static readonly Dictionary<Type, IListenerList> s_Listeners = new Dictionary<Type, IListenerList>(32);
+        private static readonly List<Type> s_emptyKeysTemp = new List<Type>(16);
 
         public static void Register<T>(ISignalListener<T> listener) where T : ISignalEvent
         {
@@ -51,13 +52,20 @@ namespace UniCore.Signal
         public static void ReleaseEmptyLists()
         {
             if (s_Listeners.Count == 0) return;
-            var temp = new List<Type>(16);
+            
+            s_emptyKeysTemp.Clear();
+            
             foreach (var kvp in s_Listeners)
             {
-                if (kvp.Value.Count == 0) temp.Add(kvp.Key);
+                if (kvp.Value.Count == 0) s_emptyKeysTemp.Add(kvp.Key);
             }
 
-            for (var i = 0; i < temp.Count; i++) s_Listeners.Remove(temp[i]);
+            var count = s_emptyKeysTemp.Count;
+            if (count == 0) return;
+
+            for (var i = 0; i < count; i++) s_Listeners.Remove(s_emptyKeysTemp[i]);
+            
+            s_emptyKeysTemp.Clear();
         }
 
         public static void Clear()

@@ -6,8 +6,6 @@ namespace UniCore.Signal
 {
     public class SignalListenerBehaviour : MonoBehaviour
     {
-        [SerializeField] private bool m_generateCache = true;
-
         private static readonly Type s_listenerGenericType = typeof(ISignalListener<>);
         private static Dictionary<Type, Type[]> s_typeCache;
 
@@ -17,40 +15,21 @@ namespace UniCore.Signal
         private void Auto(bool register)
         {
             var monoType = GetType();
-
-            if (m_generateCache)
+            
+            s_typeCache ??= new Dictionary<Type, Type[]>(8);
+            if (!s_typeCache.TryGetValue(monoType, out var signals))
             {
-                s_typeCache ??= new Dictionary<Type, Type[]>(8);
-                if (!s_typeCache.TryGetValue(monoType, out var signals))
-                {
-                    signals = BuildSignalArray(monoType);
-                    s_typeCache[monoType] = signals;
-                }
-
-                for (var i = 0; i < signals.Length; i++)
-                {
-                    if (register)
-                        SignalSystem.Register(signals[i], this);
-                    else
-                        SignalSystem.Unregister(signals[i], this);
-                }
-
-                return;
+                signals = BuildSignalArray(monoType);
+                s_typeCache[monoType] = signals;
             }
 
-            var interfaces = monoType.GetInterfaces();
-            for (var i = interfaces.Length - 1; i >= 0; i--)
+            var length = signals.Length;
+            for (var i = 0; i < length; i++)
             {
-                var itf = interfaces[i];
-                if (!itf.IsGenericType) continue;
-                if (itf.GetGenericTypeDefinition() != s_listenerGenericType) continue;
-
-                var signalType = itf.GetGenericArguments()[0];
-
                 if (register)
-                    SignalSystem.Register(signalType, this);
+                    SignalSystem.Register(signals[i], this);
                 else
-                    SignalSystem.Unregister(signalType, this);
+                    SignalSystem.Unregister(signals[i], this);
             }
         }
 
