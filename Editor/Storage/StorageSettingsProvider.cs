@@ -11,7 +11,7 @@ namespace UniCore.Editor.Storage
         {
             var provider = new SettingsProvider("Project/UniCore/Storage", SettingsScope.Project)
             {
-                keywords = new[] { "Storage", "Save", "Encrypt", "UniCore", "Security" },
+                keywords = new[] { "Storage", "Save", "Encrypt", "Compress", "UniCore", "Security" },
                 guiHandler = (_) =>
                 {
                     var config = EditorStorageSettings.instance;
@@ -47,6 +47,9 @@ namespace UniCore.Editor.Storage
             var serializationTypeProp = dataProperty.FindPropertyRelative("SerializationType");
             var serializerCustomProp = dataProperty.FindPropertyRelative("SerializerCustom");
 
+            var compressionTypeProp = dataProperty.FindPropertyRelative("CompressionType");
+            var compressorCustomProp = dataProperty.FindPropertyRelative("CompressorCustom");
+
             var keyTypeProp = dataProperty.FindPropertyRelative("KeyType");
             var keyCustomProp = dataProperty.FindPropertyRelative("KeyCustom");
 
@@ -69,6 +72,7 @@ namespace UniCore.Editor.Storage
 
             EditorGUILayout.LabelField("Data Handling", EditorStyles.boldLabel);
             DrawField("Serialization Type", "d_TextAsset Icon", serializationTypeProp, (int)SerializationType.Custom, serializerCustomProp);
+            DrawField("Compression Layer", "d_ScaleTool", compressionTypeProp, (int)UniCore.Storage.CompressionType.Custom, compressorCustomProp);
             DrawField("Storage Medium", "d_Folder Icon", storageTypeProp, (int)StorageType.Custom, storageCustomProp);
             EditorGUILayout.Space(10);
 

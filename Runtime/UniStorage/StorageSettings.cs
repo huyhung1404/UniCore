@@ -8,6 +8,7 @@ namespace UniCore.Storage
     {
         public int Version { get; }
         public ISerializer Serializer { get; }
+        public ICompressor Compressor { get; }
         public IKey Key { get; }
         public IEncryptor Encryptor { get; }
         public IProtector Protector { get; }
@@ -21,6 +22,9 @@ namespace UniCore.Storage
 
         public SerializationType SerializationType;
         public InterfaceReference<ISerializer> SerializerCustom;
+        
+        public CompressionType CompressionType;
+        public InterfaceReference<ICompressor> CompressorCustom;
 
         public KeyType KeyType;
         public InterfaceReference<IKey> KeyCustom;
@@ -49,6 +53,19 @@ namespace UniCore.Storage
                     SerializationType.Binary => new BinarySerializer(),
                     SerializationType.Custom => Data.SerializerCustom.Value,
                     _ => new JsonSerializer()
+                };
+            }
+        }
+
+        public ICompressor Compressor
+        {
+            get
+            {
+                return Data.CompressionType switch
+                {
+                    CompressionType.None => new NoCompressor(),
+                    CompressionType.GZip => new GZipCompressor(),
+                    _ => Data.CompressorCustom.Value
                 };
             }
         }

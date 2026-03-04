@@ -14,7 +14,7 @@ namespace UniCore.Editor.QuickAccess
         private static GUIStyle s_iconStyle;
         private string _search = "";
 
-        [MenuItem("UniCore/Tools/Quick Access")]
+        [MenuItem("UniCore/Windows/Quick Access", priority = 2)]
         private static void Open() => GetWindow<QuickAccessWindow>("Quick Access");
 
         private static void InitStyle()
