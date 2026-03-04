@@ -32,16 +32,16 @@ It helps structure large projects with clear data flow, explicit state managemen
   Common low-level helpers and extensions supporting core runtime and tooling systems.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniUtilities/README.md)
 
+* 📜 **UniConsole**
+  Lightweight, extensible debugging framework for Unity.
+  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniDebug/README.md)
+
 * 🔄 **UniState**
   Lightweight state machine for system and gameplay flow.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniState/README.md)
 
 * 🎯 **UniCommand**
   Structured, traceable gameplay action execution layer.
-  [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
-
-* 🧩 **UniContext**
-  Lightweight runtime service registry.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniVars/README.md)
 
 * 🎮 **UniInput**
