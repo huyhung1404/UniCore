@@ -5,9 +5,9 @@
         "UniSignal",
         "Unity.Addressables",
         "Unity.ResourceManager",
-        "UniAttribute",
         "Unity.Addressables.Editor",
-        "UniAudio"
+        "UniAudio",
+        "UniCore.Editor"
     ],
     "includePlatforms": [
         "Editor"

@@ -36,6 +36,11 @@
         {
             if (s_pipeline != null) return;
             ISettings setting = StorageSettings.GetInstance(StorageSettings.k_FileName);
+            if (setting == null || !setting.IsSystemEnabled)
+            {
+                throw new System.Exception("UniStorage is not enabled!");
+            }
+
             s_pipeline = new StoragePipeline(setting);
         }
     }

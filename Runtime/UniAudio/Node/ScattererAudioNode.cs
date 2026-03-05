@@ -11,9 +11,8 @@ namespace UniCore.Audio.Node
     public class ScattererAudioNode : BaseAudioNode
     {
         [SerializeField] private AudioClipReference[] m_references = Array.Empty<AudioClipReference>();
-        
-        [Header("Scatter Settings")]
-        [SerializeField] private float m_minDelay = 1f;
+
+        [Header("Scatter Settings")] [SerializeField] private float m_minDelay = 1f;
         [SerializeField] private float m_maxDelay = 5f;
         [SerializeField] private float m_spawnRadius = 15f;
 
@@ -21,45 +20,45 @@ namespace UniCore.Audio.Node
         {
             if (signal.SoundId.HasValue)
             {
-                RunScattererLoop(signal).Forget();
+                await RunScattererLoop(signal);
             }
             else
             {
                 Debug.LogWarning("[UniAudio] ScattererNode yêu cầu PlaySoundSignal phải có SoundId để quản lý vòng đời!");
             }
-       
+
             return null;
         }
 
-        private async UniTaskVoid RunScattererLoop(PlaySoundSignal signal)
+        private async UniTask RunScattererLoop(PlaySoundSignal signal)
         {
             while (AudioSystem.s_Instance != null && AudioSystem.s_Instance.IsSoundActive(signal.SoundId))
             {
                 var waitTime = Random.Range(m_minDelay, m_maxDelay);
                 await UniTask.WaitForSeconds(waitTime);
-                
+
                 if (AudioSystem.s_Instance == null || !AudioSystem.s_Instance.IsSoundActive(signal.SoundId)) break;
 
                 var clipRef = m_references[Random.Range(0, m_references.Length)];
                 var clip = await clipRef.LoadAsync();
-                
+
                 if (clip != null && AudioSystem.s_Instance.IsSoundActive(signal.SoundId))
                 {
                     var emitter = SoundEmitterPool.Pop();
                     var config = AudioSystem.s_Instance.SearchSystem.GetConfiguration(signal.ConfigId.AsSpan());
-         
+
                     var randomOffset = Random.insideUnitSphere * m_spawnRadius;
-                
+
                     var childSignal = signal;
                     childSignal.Position += randomOffset;
                     childSignal.IsLoop = false;
-                    childSignal.SoundId = null; 
-                    
-                    var cmd = new ClipPlayCommand 
-                    { 
-                        Clip = clip, Delay = 0f, Reference = clipRef, ReleaseDelay = ReleaseDelay, LayerIndex = 0, LayerVolume = 1f 
+                    childSignal.SoundId = null;
+
+                    var cmd = new ClipPlayCommand
+                    {
+                        Clip = clip, Delay = 0f, Reference = clipRef, ReleaseDelay = ReleaseDelay, LayerIndex = 0, LayerVolume = 1f
                     };
-                    
+
                     emitter.PlayAudioCommand(childSignal, cmd, config);
                 }
             }

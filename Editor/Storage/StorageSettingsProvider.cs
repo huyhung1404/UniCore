@@ -22,7 +22,7 @@ namespace UniCore.Editor.Storage
 
                     var editorDataProp = serializedObject.FindProperty("EditorData");
 
-                    EditorGUILayout.BeginVertical(new GUIStyle { padding = new RectOffset(10, 10, 10, 10) });
+                    EditorGUILayout.BeginVertical(new GUIStyle { padding = new RectOffset(5, 5, 5, 5) });
 
                     EditorGUI.BeginChangeCheck();
 
@@ -42,6 +42,10 @@ namespace UniCore.Editor.Storage
 
         private static void OnGUI(SerializedProperty dataProperty)
         {
+            var enableProp = dataProperty.FindPropertyRelative("IsSystemEnabled");
+            var isSystemEnabled = UniEditorGUI.DrawMasterToggle(enableProp);
+            if (!isSystemEnabled) return;
+            
             var versionProp = dataProperty.FindPropertyRelative("Version");
 
             var serializationTypeProp = dataProperty.FindPropertyRelative("SerializationType");

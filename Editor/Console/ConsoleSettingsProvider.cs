@@ -22,7 +22,7 @@ namespace UniCore.Editor.Console
 
                     var editorDataProp = serializedObject.FindProperty("EditorData");
 
-                    EditorGUILayout.BeginVertical(new GUIStyle { padding = new RectOffset(15, 15, 15, 15) });
+                    EditorGUILayout.BeginVertical(new GUIStyle { padding = new RectOffset(5, 5, 5, 5) });
 
                     EditorGUI.BeginChangeCheck();
 
@@ -42,6 +42,10 @@ namespace UniCore.Editor.Console
 
         private static void DrawSettingsGUI(SerializedProperty dataProperty)
         {
+            var enableProp = dataProperty.FindPropertyRelative("m_isSystemEnabled");
+            var isSystemEnabled = UniEditorGUI.DrawMasterToggle(enableProp);
+            if (!isSystemEnabled) return;
+            
             var passwordProp = dataProperty.FindPropertyRelative("m_password");
 
             var loginTriggerProp = dataProperty.FindPropertyRelative("m_loginTriggerMode");

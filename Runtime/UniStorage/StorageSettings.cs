@@ -6,6 +6,7 @@ namespace UniCore.Storage
 {
     public interface ISettings
     {
+        public bool IsSystemEnabled { get; }
         public int Version { get; }
         public ISerializer Serializer { get; }
         public ICompressor Compressor { get; }
@@ -18,11 +19,12 @@ namespace UniCore.Storage
     [Serializable]
     public struct SerializableData
     {
+        public bool IsSystemEnabled;
         public int Version;
 
         public SerializationType SerializationType;
         public InterfaceReference<ISerializer> SerializerCustom;
-        
+
         public CompressionType CompressionType;
         public InterfaceReference<ICompressor> CompressorCustom;
 
@@ -42,6 +44,8 @@ namespace UniCore.Storage
     public sealed class StorageSettings : UniSettingsBase<StorageSettings, SerializableData, EditorStorageSettings>, ISettings
     {
         internal const string k_FileName = "UniCore_Runtime_StorageSettings";
+
+        public bool IsSystemEnabled => Data.IsSystemEnabled;
         public int Version => Data.Version;
 
         public ISerializer Serializer

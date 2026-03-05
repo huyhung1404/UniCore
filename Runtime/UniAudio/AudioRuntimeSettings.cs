@@ -9,7 +9,7 @@ namespace UniCore.Audio
     public sealed class AudioRuntimeSettings : ScriptableObject
     {
         internal const string k_FileName = "UniCore_Runtime_AudioSettings";
-        
+
         [Serializable]
         public struct AudioNodeEntry
         {
@@ -22,15 +22,18 @@ namespace UniCore.Audio
         [SerializeField] private SoundEmitter m_soundEmitterPrefab;
         [SerializeField] private int m_poolInitialSize = 16;
         [SerializeField] private AudioConfiguration[] m_configurations;
-        
+        [SerializeField] private bool m_isSystemEnabled;
+
         public AudioNodeEntry[] BakedNodes => m_bakedNodes;
         public AudioMixer OutputMixer => m_outputMixer;
         public SoundEmitter SoundEmitterPrefab => m_soundEmitterPrefab;
         public int PoolInitialSize => m_poolInitialSize;
         public AudioConfiguration[] Configurations => m_configurations;
+        internal bool IsSystemEnabled => m_isSystemEnabled;
 
-        public void Setup(AudioNodeEntry[] bakedNodes, AudioMixer mixer, SoundEmitter prefab, int poolSize, AudioConfiguration[] configs)
+        public void Setup(bool isEnabled, AudioNodeEntry[] bakedNodes, AudioMixer mixer, SoundEmitter prefab, int poolSize, AudioConfiguration[] configs)
         {
+            m_isSystemEnabled = isEnabled;
             m_bakedNodes = bakedNodes;
             m_outputMixer = mixer;
             m_soundEmitterPrefab = prefab;

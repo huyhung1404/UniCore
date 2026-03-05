@@ -17,7 +17,7 @@ namespace UniCore.Editor.Audio
         {
             var provider = new SettingsProvider("Project/UniCore/Audio", SettingsScope.Project)
             {
-                keywords = new[] { "Audio", "UniCore", "Node", "Tree", "Settings", "Configuration", "Ducking" },
+                keywords = new[] { "Audio", "UniCore", "Node", "Tree", "Settings", "Configuration", "Ducking", "Enable", "Disable" },
                 guiHandler = (_) =>
                 {
 #if HAS_UNITASK && HAS_ADDRESSABLES
@@ -82,6 +82,9 @@ namespace UniCore.Editor.Audio
 
         private static void OnGUI(SerializedObject serializedObject)
         {
+            var enableProp = serializedObject.FindProperty("m_isSystemEnabled");
+            var isSystemEnabled = UniEditorGUI.DrawMasterToggle(enableProp);
+            if (!isSystemEnabled) return;
             DrawGeneralSettings(serializedObject);
             GUILayout.Space(15);
 

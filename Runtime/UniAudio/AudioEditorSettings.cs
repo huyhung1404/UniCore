@@ -14,11 +14,13 @@ namespace UniCore.Audio
         [SerializeField] private SoundEmitter m_soundEmitterPrefab;
         [SerializeField] private int m_poolInitialSize = 16;
         [SerializeField] private AudioConfiguration[] m_configurations;
+        [SerializeField] private bool m_isSystemEnabled;
         internal DirectionNode RootNode => m_rootNode;
         internal AudioMixer OutputMixer => m_outputMixer;
         internal SoundEmitter SoundEmitterPrefab => m_soundEmitterPrefab;
         internal int PoolInitialSize => m_poolInitialSize;
         internal AudioConfiguration[] Configurations => m_configurations;
+        internal bool IsSystemEnabled => m_isSystemEnabled;
         
         internal void SaveData()
         {
@@ -38,6 +40,7 @@ namespace UniCore.Audio
             var runtimeSettings = CreateInstance<AudioRuntimeSettings>();
 
             AudioSearchSystem.BakeToRuntimeSettings(
+                editorSettings.IsSystemEnabled,
                 editorSettings.RootNode,
                 editorSettings.OutputMixer,
                 editorSettings.SoundEmitterPrefab,

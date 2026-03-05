@@ -16,13 +16,12 @@ namespace UniCore.Audio
         ISignalListener<PlaySoundSignal>,
         ISignalListener<StopSoundSignal>,
         ISignalListener<SoundFinishSignal>,
-        ISignalListener<ChangeSnapshotSignal> // [MỚI]
+        ISignalListener<ChangeSnapshotSignal>
     {
-        [Header("Audio control")] 
-        [Range(0f, 1f), SerializeField] private float m_masterVolume = 1f;
+        [Header("Audio control")] [Range(0f, 1f), SerializeField] private float m_masterVolume = 1f;
         [Range(0f, 1f), SerializeField] private float m_musicVolume = 1f;
         [Range(0f, 1f), SerializeField] private float m_sfxVolume = 1f;
-        
+
         internal static AudioSystem s_Instance;
         internal AudioRuntimeSettings RuntimeSettings;
         internal AudioSearchSystem SearchSystem;
@@ -30,24 +29,33 @@ namespace UniCore.Audio
         private readonly HashSet<int> _activeSounds = new HashSet<int>();
         private readonly Dictionary<int, int> _nodePlayCounts = new Dictionary<int, int>();
         private readonly Dictionary<int, int> _soundIdToNodeHash = new Dictionary<int, int>();
-        
+
         private int _duckingCount;
 
 #if UNITY_EDITOR
         public static int TotalCulledCount { get; private set; }
 #endif
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Create()
         {
             if (s_Instance != null) return;
+#if UNITY_EDITOR
+            var settings = AudioEditorSettings.CreateRuntimeInstance();
+#else
+            var settings = Resources.Load<AudioRuntimeSettings>(AudioRuntimeSettings.k_FileName);
+#endif
+
+            if (settings == null || !settings.IsSystemEnabled) return;
+
             var go = new GameObject("AudioSystem");
             s_Instance = go.AddComponent<AudioSystem>();
+            s_Instance.RuntimeSettings = settings;
             go.AddComponent<AudioListener>();
             DontDestroyOnLoad(go);
         }
 
-        private void Awake()
+        private void Start()
         {
             if (s_Instance != null && s_Instance != this)
             {
@@ -56,22 +64,17 @@ namespace UniCore.Audio
             }
 
             s_Instance = this;
-
-#if UNITY_EDITOR
-            RuntimeSettings = AudioEditorSettings.CreateRuntimeInstance();
-            TotalCulledCount = 0;
-#else
-            RuntimeSettings = Resources.Load<AudioRuntimeSettings>(AudioRuntimeSettings.k_FileName);
-#endif
-
-            if (RuntimeSettings == null)
+            if (RuntimeSettings == null || !RuntimeSettings.IsSystemEnabled)
             {
-                Debug.LogError("[UniAudio] AudioRuntimeSettings is missing.");
+                Destroy(gameObject);
                 return;
             }
-            
-            SearchSystem = new AudioSearchSystem().WithRuntimeSettings(RuntimeSettings);
 
+#if UNITY_EDITOR
+            TotalCulledCount = 0;
+#endif
+
+            SearchSystem = new AudioSearchSystem().WithRuntimeSettings(RuntimeSettings);
             SoundEmitterPool.Prewarm(RuntimeSettings.PoolInitialSize);
 
             m_masterVolume = PlayerPrefs.GetFloat("MasterVolume", 1);
@@ -114,11 +117,11 @@ namespace UniCore.Audio
         }
 
         #region Volume, Ducking & Snapshot
-        
+
         public void OnSignal(ChangeSnapshotSignal signal)
         {
             if (RuntimeSettings == null || RuntimeSettings.OutputMixer == null) return;
-            
+
             var snapshot = RuntimeSettings.OutputMixer.FindSnapshot(signal.SnapshotName);
             if (snapshot != null)
             {
@@ -188,6 +191,7 @@ namespace UniCore.Audio
                 SetGroupVolume("MusicVolume", Mathf.Lerp(targetVolume, m_musicVolume, t / fadeTime));
                 await UniTask.Yield();
             }
+
             SetGroupVolume("MusicVolume", m_musicVolume);
         }
 
@@ -198,7 +202,7 @@ namespace UniCore.Audio
         public void OnSignal(PlaySoundSignal signal)
         {
             if (string.IsNullOrEmpty(signal.NodePath)) return;
-            
+
             var nodeHash = signal.NodePath.GetFNV1aHash();
             var node = SearchSystem?.FindNode(signal.NodePath.AsSpan());
 
@@ -234,6 +238,7 @@ namespace UniCore.Audio
                 {
                     _nodePlayCounts[hash] = Mathf.Max(0, count - 1);
                 }
+
                 _soundIdToNodeHash.Remove(soundId);
             }
         }
@@ -266,6 +271,7 @@ namespace UniCore.Audio
                     foreach (var cmd in clipData.Commands) cmd.Reference?.ReleaseUsage(cmd.ReleaseDelay);
                     ClipDataPool.Push(clipData);
                 }
+
                 return;
             }
 
@@ -279,7 +285,7 @@ namespace UniCore.Audio
 
             ClipDataPool.Push(clipData);
         }
-        
+
         public bool IsSoundActive(int? soundId)
         {
             if (!soundId.HasValue) return false;

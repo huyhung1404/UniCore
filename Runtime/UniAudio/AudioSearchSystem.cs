@@ -17,7 +17,7 @@ namespace UniCore.Audio
         {
             if (settings == null) return this;
             _runtimeSettings = settings;
-            
+
             var bakedNodes = settings.BakedNodes;
             if (bakedNodes != null)
             {
@@ -27,7 +27,7 @@ namespace UniCore.Audio
                     _nodeMap[bakedNodes[i].HashKey] = i;
                 }
             }
-            
+
             var configs = settings.Configurations;
             if (configs != null)
             {
@@ -58,14 +58,15 @@ namespace UniCore.Audio
             return _configMap.TryGetValue(hash, out var index) ? _runtimeSettings.Configurations[index] : null;
         }
 
-        public static void BakeToRuntimeSettings(DirectionNode rootNode, AudioMixer mixer, SoundEmitter prefab, int poolSize, AudioConfiguration[] configs, AudioRuntimeSettings targetSettings)
+        public static void BakeToRuntimeSettings(bool isEnabled, DirectionNode rootNode, AudioMixer mixer, SoundEmitter prefab, int poolSize, AudioConfiguration[] configs,
+            AudioRuntimeSettings targetSettings)
         {
             if (targetSettings == null || rootNode == null) return;
 
             var bakedList = new List<AudioRuntimeSettings.AudioNodeEntry>();
             BakeNodeRecursive(rootNode, string.Empty, bakedList);
 
-            targetSettings.Setup(bakedList.ToArray(), mixer, prefab, poolSize, configs);
+            targetSettings.Setup(isEnabled, bakedList.ToArray(), mixer, prefab, poolSize, configs);
         }
 
         private static void BakeNodeRecursive(BaseAudioNode node, string currentPath, List<AudioRuntimeSettings.AudioNodeEntry> list)
@@ -75,10 +76,10 @@ namespace UniCore.Audio
             var nodePath = string.IsNullOrEmpty(currentPath) ? node.NodeName : $"{currentPath}/{node.NodeName}";
             var hash = nodePath.GetFNV1aHash();
 
-            list.Add(new AudioRuntimeSettings.AudioNodeEntry 
-            { 
-                HashKey = hash, 
-                Node = node 
+            list.Add(new AudioRuntimeSettings.AudioNodeEntry
+            {
+                HashKey = hash,
+                Node = node
             });
 
             if (node is DirectionNode directionNode && directionNode.Children != null)

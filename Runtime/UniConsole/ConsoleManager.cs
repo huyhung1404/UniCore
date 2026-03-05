@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using UnityEngine.Profiling; // Thêm thư viện Profiler
+using UnityEngine.Profiling;
 
 namespace UniCore.Console
 {
@@ -8,85 +8,60 @@ namespace UniCore.Console
     {
         private static ConsoleManager s_instance;
 
-        private ConsoleRuntimeSettings _runtimeSettingsAsset;
-        private DeveloperAuthenticator _authenticator;
+        private ConsoleSettings _settings;
         private ConsoleMemory _memory;
         private ConsoleCommandProcessor _commandProcessor;
         private ConsoleGUI _gui;
-        
-        private bool _isConsoleOpen;
-        private bool _isConsoleInitialized; 
+        private ControlTrigger _controlTrigger;
+
+        private bool _isConsoleInitialized;
 
         private float _fpsTimer;
         private int _fpsFrames;
         private float _currentFps;
         private float _currentRamMB;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        private static void Initialize()
+        public void Initialize(ConsoleSettings settings)
         {
-            var go = new GameObject("[ConsoleManager]");
-            DontDestroyOnLoad(go);
-            s_instance = go.AddComponent<ConsoleManager>();
+            _settings = settings;
+            s_instance = this;
+            _controlTrigger = new ControlTrigger(settings.m_openTriggerMode, _settings.m_openTapCount, _settings.m_openTapTimeout, _settings.m_openLongPressDuration);
+
+            _gui = new ConsoleGUI
+            {
+                OnCloseRequested = () => _controlTrigger.IsOpen = false,
+                OnSubmitCommand = ProcessCommand,
+                OnCancelCommand = CancelCommand
+            };
+
+            InitializeDeveloperModeMemory();
         }
 
-        private void Awake()
+        private void Start()
         {
             if (s_instance != null && s_instance != this)
             {
-                Destroy(gameObject);
-                return; 
+                Destroy(this);
             }
+        }
 
-            _authenticator = new DeveloperAuthenticator(GetLiveSettings);
-            _gui = new ConsoleGUI();
-            _gui.OnCloseRequested = () => _isConsoleOpen = false;
-            _gui.OnSubmitCommand = ProcessCommand;
-            _gui.OnCancelCommand = CancelCommand;
-            
-            if (_authenticator.IsDeveloperMode)
-            {
-                InitializeDeveloperModeMemory();
-            }
+        public void Open()
+        {
+            _controlTrigger.IsOpen = true;
         }
 
         private void OnDestroy()
         {
             _gui?.DestroyTextures();
-            if (!_isConsoleInitialized) return; 
+            if (!_isConsoleInitialized) return;
             Application.logMessageReceived -= HandleLogMessage;
-        }
-
-        private ConsoleSettings GetLiveSettings()
-        {
-            if (_runtimeSettingsAsset == null)
-            {
-                _runtimeSettingsAsset = ConsoleRuntimeSettings.GetInstance(ConsoleRuntimeSettings.k_FileName);
-            }
-            return _runtimeSettingsAsset.CurrentData;
-        }
-
-        public static void OpenConsole()
-        {
-            if (s_instance == null) return;
-            
-            if (!s_instance._authenticator.IsDeveloperMode)
-            {
-                s_instance._authenticator.CheckTriggers(); 
-            }
-            else
-            {
-                if (!s_instance._isConsoleInitialized) s_instance.InitializeDeveloperModeMemory();
-                s_instance._isConsoleOpen = true;
-            }
         }
 
         private void InitializeDeveloperModeMemory()
         {
-            if (_isConsoleInitialized) return; 
+            if (_isConsoleInitialized) return;
 
-            var settings = GetLiveSettings();
-            _memory = new ConsoleMemory(settings.m_maxLogs);
+            _memory = new ConsoleMemory(_settings.m_maxLogs);
             _commandProcessor = new ConsoleCommandProcessor();
             _commandProcessor.Initialize();
 
@@ -96,57 +71,44 @@ namespace UniCore.Console
 
         private void Update()
         {
-            var settings = GetLiveSettings();
-
-            if (_authenticator.IsDeveloperMode && settings.m_enableMiniProfiler)
+            if (_settings.m_enableMiniProfiler)
             {
                 _fpsTimer += Time.unscaledDeltaTime;
                 _fpsFrames++;
-                
-                if (_fpsTimer >= 0.5f) 
+
+                if (_fpsTimer >= 0.5f)
                 {
                     _currentFps = _fpsFrames / _fpsTimer;
-                    _currentRamMB = Profiler.GetTotalAllocatedMemoryLong() / 1048576f; 
+                    _currentRamMB = Profiler.GetTotalAllocatedMemoryLong() / 1048576f;
                     _fpsTimer = 0f;
                     _fpsFrames = 0;
                 }
             }
 
-            if (_authenticator.IsDeveloperMode && settings.m_openConsoleKey != KeyCode.None)
+            if (_settings.m_openConsoleKey != KeyCode.None)
             {
-                if (Input.GetKeyDown(settings.m_openConsoleKey))
+                if (Input.GetKeyDown(_settings.m_openConsoleKey))
                 {
-                    _isConsoleOpen = !_isConsoleOpen;
-                    if (_isConsoleOpen && !_isConsoleInitialized) InitializeDeveloperModeMemory();
-                    return; 
+                    _controlTrigger.IsOpen = !_controlTrigger.IsOpen;
+                    return;
                 }
             }
 
-            if (_authenticator.IsDeveloperMode && !_isConsoleInitialized)
+            var triggerResult = _controlTrigger.CheckTriggers();
+
+            if (triggerResult == TriggerResult.Request)
             {
-                InitializeDeveloperModeMemory(); 
-                _isConsoleOpen = true; 
-                return;
-            }
-
-            if (_isConsoleOpen) return;
-
-            var triggerResult = _authenticator.CheckTriggers();
-
-            if (triggerResult == TriggerResult.RequestOpenConsole)
-            {
-                _isConsoleOpen = true; 
+                _controlTrigger.IsOpen = true;
             }
         }
 
         private void HandleLogMessage(string condition, string stackTrace, LogType type)
         {
-            var settings = GetLiveSettings();
             var shouldCaptureTrace = false;
-            
-            if (type == LogType.Log) shouldCaptureTrace = settings.m_captureLogStackTrace;
-            else if (type == LogType.Warning) shouldCaptureTrace = settings.m_captureWarningStackTrace;
-            else if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert) shouldCaptureTrace = settings.m_captureErrorStackTrace;
+
+            if (type == LogType.Log) shouldCaptureTrace = _settings.m_captureLogStackTrace;
+            else if (type == LogType.Warning) shouldCaptureTrace = _settings.m_captureWarningStackTrace;
+            else if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert) shouldCaptureTrace = _settings.m_captureErrorStackTrace;
 
             _memory.AddLog(condition, stackTrace, type, false, shouldCaptureTrace, _gui.IsCollapsed);
             _gui.LogScrollPos.y = float.MaxValue;
@@ -156,7 +118,7 @@ namespace UniCore.Console
         {
             _memory.AddLog($"> {inputRaw}", "", LogType.Log, true, false, false);
 
-            var resultMsg = _commandProcessor.ProcessInput(inputRaw, out var logType, (cmdInfo, args) => 
+            var resultMsg = _commandProcessor.ProcessInput(inputRaw, out var logType, (cmdInfo, args) =>
             {
                 try
                 {
@@ -165,6 +127,7 @@ namespace UniCore.Console
                     {
                         invokeArgs[i] = Convert.ChangeType(args[i], cmdInfo.Parameters[i].ParameterType);
                     }
+
                     cmdInfo.Method.Invoke(null, invokeArgs);
                 }
                 catch (Exception e)
@@ -177,7 +140,7 @@ namespace UniCore.Console
             {
                 _memory.AddLog(resultMsg, "", logType, true, false, false);
             }
-            
+
             _gui.LogScrollPos.y = float.MaxValue;
         }
 
@@ -192,28 +155,21 @@ namespace UniCore.Console
 
         private void OnGUI()
         {
-            var settings = GetLiveSettings();
-            var baseScale = Mathf.Min(Screen.width, Screen.height) / settings.m_referenceMinDimension;
-            var finalScale = baseScale * settings.m_guiScaleMultiplier;
-            
+            var baseScale = Mathf.Min(Screen.width, Screen.height) / _settings.m_referenceMinDimension;
+            var finalScale = baseScale * _settings.m_guiScaleMultiplier;
+
             GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(finalScale, finalScale, 1f));
             var virtualWidth = Screen.width / finalScale;
             var virtualHeight = Screen.height / finalScale;
 
-            _gui.InitializeStyles(settings.m_guiOpacity, settings.m_profilerOpacity);
+            _gui.InitializeStyles(_settings.m_guiOpacity, _settings.m_profilerOpacity);
 
-            if (_authenticator.IsDeveloperMode && settings.m_enableMiniProfiler)
+            if (_settings.m_enableMiniProfiler)
             {
                 _gui.DrawMiniProfiler(_currentFps, _currentRamMB, virtualWidth, virtualHeight);
             }
 
-            if (_authenticator.IsLoginOpen)
-            {
-                _authenticator.DrawLoginPanel(virtualWidth, virtualHeight, new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter });
-                return; 
-            }
-
-            if (!_isConsoleOpen || !_isConsoleInitialized) return; 
+            if (!_controlTrigger.IsOpen || !_isConsoleInitialized) return;
 
             _gui.DrawConsole(_memory, _commandProcessor, virtualWidth, virtualHeight);
         }
