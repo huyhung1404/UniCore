@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace UniCore.Console
@@ -18,19 +17,25 @@ namespace UniCore.Console
         private GUIStyle _mainAreaStyle;
         private GUIStyle _toolbarStyle;
         private GUIStyle _toolbarButtonStyle;
-        private GUIStyle _searchFieldStyle;
+        private GUIStyle _toolbarButtonSelectedStyle;
+        private GUIStyle _toolbarSearchStyle;
+        private GUIStyle _consoleInputStyle;
         private GUIStyle _logItemStyle;
         private GUIStyle _logItemSelectedStyle;
         private GUIStyle _detailBoxStyle;
         private GUIStyle _cancelButtonStyle;
-        private GUIStyle _promptLabelStyle;
-        private GUIStyle _historyButtonStyle;
+        private GUIStyle _promptLabelTransparentStyle;
         private GUIStyle _profilerStyle;
+
+        private float _splitRatio = 0.65f;
+        private bool _isDraggingSplitter;
 
         private Texture2D _selectedBgTexture;
         private Texture2D _normalBgTexture;
         private Texture2D _panelBgTexture;
         private Texture2D _promptBgTexture;
+        private Texture2D _buttonBgTexture;
+        private Texture2D _buttonHoverTexture;
 
         public string ConsoleInput = "";
         public string SearchString = "";
@@ -59,7 +64,8 @@ namespace UniCore.Console
         private Vector2 _profilerDragOffset;
         private float _lastConsoleOpacity = -1f;
         private float _lastProfilerOpacity = -1f;
-
+        private bool _shouldFocusInput;
+        
         public Action OnCloseRequested;
         public Action<string> OnSubmitCommand;
         public Action OnCancelCommand;
@@ -105,36 +111,76 @@ namespace UniCore.Console
             _lastConsoleOpacity = consoleOpacity;
             _lastProfilerOpacity = profilerOpacity;
 
-            _selectedBgTexture = CreateSolidColorTexture(2, 2, new Color(0.17f, 0.36f, 0.53f, consoleOpacity));
-            _normalBgTexture = CreateSolidColorTexture(2, 2, new Color(0.16f, 0.16f, 0.16f, consoleOpacity * 0.9f));
-            _panelBgTexture = CreateSolidColorTexture(2, 2, new Color(0.2f, 0.2f, 0.2f, consoleOpacity));
-            _promptBgTexture = CreateSolidColorTexture(2, 2, new Color(0.1f, 0.1f, 0.1f, consoleOpacity));
+            var baseColor = new Color(0.12f, 0.12f, 0.12f, consoleOpacity);
+            var panelColor = new Color(0.15f, 0.15f, 0.15f, consoleOpacity);
+            var buttonColor = new Color(0.2f, 0.2f, 0.2f, consoleOpacity);
+            var hoverColor = new Color(0.26f, 0.26f, 0.26f, consoleOpacity);
+            var accentColor = new Color(0.17f, 0.36f, 0.53f, consoleOpacity);
 
-            _mainAreaStyle = new GUIStyle(GUI.skin.box)
+            _selectedBgTexture = CreateSolidColorTexture(2, 2, accentColor);
+            _normalBgTexture = CreateSolidColorTexture(2, 2, baseColor);
+            _panelBgTexture = CreateSolidColorTexture(2, 2, panelColor);
+            _promptBgTexture = CreateSolidColorTexture(2, 2, new Color(0.08f, 0.08f, 0.08f, consoleOpacity));
+            _buttonBgTexture = CreateSolidColorTexture(2, 2, buttonColor);
+            _buttonHoverTexture = CreateSolidColorTexture(2, 2, hoverColor);
+
+            _mainAreaStyle = new GUIStyle()
             {
                 normal = { background = _panelBgTexture },
                 margin = new RectOffset(0, 0, 0, 0),
-                padding = new RectOffset(5, 5, 5, 5)
+                padding = new RectOffset(2, 2, 2, 2)
             };
 
-            _toolbarStyle = new GUIStyle(GUI.skin.box)
+            _toolbarStyle = new GUIStyle()
             {
                 padding = new RectOffset(5, 5, 5, 5),
                 margin = new RectOffset(0, 0, 0, 0),
                 normal = { background = _panelBgTexture }
             };
 
-            _toolbarButtonStyle = new GUIStyle(GUI.skin.button) { fontSize = 14 };
-            _searchFieldStyle = new GUIStyle(GUI.skin.textField) { fontSize = 14, alignment = TextAnchor.MiddleLeft };
+            _toolbarButtonStyle = new GUIStyle()
+            {
+                fontSize = 14,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { background = _buttonBgTexture, textColor = new Color(0.9f, 0.9f, 0.9f) },
+                hover = { background = _buttonHoverTexture, textColor = Color.white },
+                active = { background = _selectedBgTexture, textColor = Color.white },
+                onNormal = { background = _selectedBgTexture, textColor = Color.white },
+                onHover = { background = _selectedBgTexture, textColor = Color.white },
+                onActive = { background = _selectedBgTexture, textColor = Color.white },
+                padding = new RectOffset(5, 5, 2, 2),
+                margin = new RectOffset(2, 2, 2, 2)
+            };
 
-            _logItemStyle = new GUIStyle(GUI.skin.label)
+            _toolbarButtonSelectedStyle = new GUIStyle(_toolbarButtonStyle)
+            {
+                normal = { background = _selectedBgTexture, textColor = Color.white },
+                hover = { background = _selectedBgTexture, textColor = Color.white }
+            };
+
+            _toolbarSearchStyle = new GUIStyle(GUI.skin.textField)
+            {
+                fontSize = 14,
+                alignment = TextAnchor.MiddleLeft,
+                normal = { background = _promptBgTexture, textColor = Color.white },
+                padding = new RectOffset(5, 5, 2, 2),
+                margin = new RectOffset(0, 0, 0, 0)
+            };
+
+            _consoleInputStyle = new GUIStyle(_toolbarSearchStyle)
+            {
+                margin = new RectOffset(0, 0, 2, 0)
+            };
+
+            _logItemStyle = new GUIStyle()
             {
                 wordWrap = false,
                 richText = true,
                 fontSize = 13,
                 margin = new RectOffset(0, 0, 0, 0),
                 padding = new RectOffset(10, 5, 5, 5),
-                normal = { background = _normalBgTexture, textColor = Color.white }
+                normal = { background = _normalBgTexture, textColor = new Color(0.85f, 0.85f, 0.85f) },
+                hover = { background = _buttonHoverTexture }
             };
 
             _logItemSelectedStyle = new GUIStyle(_logItemStyle)
@@ -142,41 +188,32 @@ namespace UniCore.Console
                 normal = { background = _selectedBgTexture, textColor = Color.white }
             };
 
-            _detailBoxStyle = new GUIStyle(GUI.skin.box)
+            _detailBoxStyle = new GUIStyle()
             {
                 wordWrap = true,
                 richText = true,
                 alignment = TextAnchor.UpperLeft,
                 fontSize = 13,
                 margin = new RectOffset(0, 0, 0, 0),
+                padding = new RectOffset(10, 10, 10, 10),
                 normal = { background = _normalBgTexture }
             };
 
-            _cancelButtonStyle = new GUIStyle(GUI.skin.button)
+            _cancelButtonStyle = new GUIStyle(_toolbarButtonStyle)
             {
-                fontSize = 14,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(1f, 0.4f, 0.4f) }
+                normal = { background = _buttonBgTexture, textColor = new Color(1f, 0.4f, 0.4f) }
             };
 
-            _promptLabelStyle = new GUIStyle(GUI.skin.box)
+            _promptLabelTransparentStyle = new GUIStyle()
             {
                 fontSize = 14,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
-                normal = { background = _promptBgTexture, textColor = new Color(0.7f, 0.7f, 0.7f) },
-                margin = new RectOffset(0, 5, 5, 0)
+                normal = { textColor = new Color(0.5f, 0.8f, 0.9f, consoleOpacity) },
+                margin = new RectOffset(8, 5, 20, 0)
             };
 
-            _historyButtonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 10,
-                alignment = TextAnchor.MiddleCenter,
-                padding = new RectOffset(0, 0, 0, 0),
-                margin = new RectOffset(0, 0, 0, 0)
-            };
-
-            _profilerStyle = new GUIStyle(GUI.skin.box)
+            _profilerStyle = new GUIStyle()
             {
                 fontSize = 12,
                 fontStyle = FontStyle.Bold,
@@ -204,12 +241,14 @@ namespace UniCore.Console
             if (_normalBgTexture != null) UnityEngine.Object.Destroy(_normalBgTexture);
             if (_panelBgTexture != null) UnityEngine.Object.Destroy(_panelBgTexture);
             if (_promptBgTexture != null) UnityEngine.Object.Destroy(_promptBgTexture);
+            if (_buttonBgTexture != null) UnityEngine.Object.Destroy(_buttonBgTexture);
+            if (_buttonHoverTexture != null) UnityEngine.Object.Destroy(_buttonHoverTexture);
         }
 
         public void DrawMiniProfiler(float fps, float ramMB, float virtualWidth, float virtualHeight)
         {
-            var fpsColor = fps >= 55f ? "#00FF00" : (fps >= 30f ? "#FFFF00" : "#FF0000");
-            var ramColor = ramMB < 300f ? "#FFFFFF" : (ramMB < 600f ? "#FFFF00" : "#FF0000");
+            var fpsColor = fps >= 55f ? "#4CAF50" : (fps >= 30f ? "#FFC107" : "#F44336");
+            var ramColor = ramMB < 300f ? "#E0E0E0" : (ramMB < 600f ? "#FFC107" : "#F44336");
 
             var text = $"⏱️ FPS: <color={fpsColor}>{fps:0.0}</color>   |   💾 RAM: <color={ramColor}>{ramMB:0.0} MB</color>";
             var content = new GUIContent(text);
@@ -222,7 +261,6 @@ namespace UniCore.Console
             }
 
             var rect = new Rect(_profilerPosX, _profilerPosY, size.x, size.y);
-
             var e = Event.current;
             var controlID = GUIUtility.GetControlID(FocusType.Passive);
 
@@ -237,7 +275,6 @@ namespace UniCore.Console
                     }
 
                     break;
-
                 case EventType.MouseDrag:
                     if (GUIUtility.hotControl == controlID && _isDraggingProfiler)
                     {
@@ -247,13 +284,11 @@ namespace UniCore.Console
                     }
 
                     break;
-
                 case EventType.MouseUp:
                     if (GUIUtility.hotControl == controlID && _isDraggingProfiler)
                     {
                         GUIUtility.hotControl = 0;
                         _isDraggingProfiler = false;
-
                         PlayerPrefs.SetFloat(k_PrefProfilerX, _profilerPosX);
                         PlayerPrefs.SetFloat(k_PrefProfilerY, _profilerPosY);
                         PlayerPrefs.Save();
@@ -278,15 +313,69 @@ namespace UniCore.Console
             GUILayout.BeginVertical();
 
             DrawToolbar(memory);
-            DrawLogList(memory);
 
-            if (ShowSuggestions) DrawCommandSuggestions(command, virtualHeight);
-            else DrawLogDetail(virtualHeight);
+            var availableHeight = virtualHeight - 124f;
+
+            var listHeight = Mathf.Max(20f, availableHeight * _splitRatio);
+            var detailHeight = Mathf.Max(20f, availableHeight * (1f - _splitRatio));
+
+            DrawLogList(memory, listHeight);
+
+            DrawSplitter(virtualWidth);
+
+            if (ShowSuggestions) DrawCommandSuggestions(command, detailHeight);
+            else DrawLogDetail(detailHeight);
 
             DrawCommandInputBar(command);
 
             GUILayout.EndVertical();
             GUILayout.EndArea();
+        }
+
+        private void DrawSplitter(float virtualWidth)
+        {
+            var splitterRect = GUILayoutUtility.GetRect(virtualWidth, 5f);
+            GUI.DrawTexture(splitterRect, _buttonHoverTexture);
+
+#if UNITY_EDITOR
+            UnityEditor.EditorGUIUtility.AddCursorRect(splitterRect, UnityEditor.MouseCursor.ResizeVertical);
+#endif
+
+            var e = Event.current;
+            var controlID = GUIUtility.GetControlID(FocusType.Passive);
+
+            switch (e.GetTypeForControl(controlID))
+            {
+                case EventType.MouseDown:
+                    if (splitterRect.Contains(e.mousePosition) && e.button == 0)
+                    {
+                        GUIUtility.hotControl = controlID;
+                        _isDraggingSplitter = true;
+                        e.Use();
+                    }
+
+                    break;
+                case EventType.MouseDrag:
+                    if (GUIUtility.hotControl == controlID && _isDraggingSplitter)
+                    {
+                        var availableHeight = Screen.height / GUI.matrix.m00 - 124f;
+                        var newY = e.mousePosition.y - 72f;
+
+                        _splitRatio = Mathf.Clamp(newY / availableHeight, 0.15f, 0.85f);
+                        e.Use();
+                    }
+
+                    break;
+                case EventType.MouseUp:
+                    if (GUIUtility.hotControl == controlID && _isDraggingSplitter)
+                    {
+                        GUIUtility.hotControl = 0;
+                        _isDraggingSplitter = false;
+                        e.Use();
+                    }
+
+                    break;
+            }
         }
 
         private void DrawToolbar(ConsoleMemory memory)
@@ -301,8 +390,18 @@ namespace UniCore.Console
             }
 
             GUILayout.Space(10);
-            GUILayout.Label("🔍 Log:", GUILayout.Width(50), GUILayout.Height(25));
-            SearchString = GUILayout.TextField(SearchString, _searchFieldStyle, GUILayout.Width(130), GUILayout.Height(25));
+
+            GUI.SetNextControlName("LogSearchBox");
+            SearchString = GUILayout.TextField(SearchString, _toolbarSearchStyle, GUILayout.Width(200), GUILayout.Height(25));
+
+            if (string.IsNullOrEmpty(SearchString) && GUI.GetNameOfFocusedControl() != "LogSearchBox")
+            {
+                var rect = GUILayoutUtility.GetLastRect();
+                var prevColor = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, 0.4f);
+                GUI.Label(rect, " 🔍 Search Log...", _toolbarSearchStyle);
+                GUI.color = prevColor;
+            }
 
             GUILayout.FlexibleSpace();
             if (GUILayout.Button("X", _cancelButtonStyle, GUILayout.Width(35), GUILayout.Height(25))) OnCloseRequested?.Invoke();
@@ -351,9 +450,9 @@ namespace UniCore.Console
             GUILayout.EndVertical();
         }
 
-        private void DrawLogList(ConsoleMemory memory)
+        private void DrawLogList(ConsoleMemory memory, float listHeight)
         {
-            LogScrollPos = GUILayout.BeginScrollView(LogScrollPos, GUI.skin.box, GUILayout.ExpandHeight(true));
+            LogScrollPos = GUILayout.BeginScrollView(LogScrollPos, GUILayout.Height(listHeight));
 
             for (var i = 0; i < memory.LogCount; i++)
             {
@@ -373,9 +472,9 @@ namespace UniCore.Console
                 var isSelected = SelectedLog == log;
                 var styleToUse = isSelected ? _logItemSelectedStyle : _logItemStyle;
 
-                var iconColor = log.IsCommandEcho ? "#00FFFF" :
-                    log.Type == LogType.Warning ? "#FFD700" :
-                    log.Type == LogType.Error || log.Type == LogType.Exception ? "#FF4500" : "#FFFFFF";
+                var iconColor = log.IsCommandEcho ? "#4FC3F7" :
+                    log.Type == LogType.Warning ? "#FFD54F" :
+                    log.Type == LogType.Error || log.Type == LogType.Exception ? "#EF5350" : "#E0E0E0";
 
                 var iconType = log.IsCommandEcho ? "▶" :
                     log.Type == LogType.Warning ? "⚠️" :
@@ -383,39 +482,55 @@ namespace UniCore.Console
 
                 var collapseText = IsCollapsed && log.CollapseCount > 1 ? $"<b>[{log.CollapseCount}]</b> " : "";
 
-                var logLine = string.IsNullOrEmpty(log.ShortStackTrace)
-                    ? $"<color={iconColor}>{iconType}</color> {log.TimeString} {collapseText}{log.Condition.Replace("\n", " ")}"
-                    : $"<color={iconColor}>{iconType}</color> {log.TimeString} {collapseText}{log.Condition.Replace("\n", " ")}\n<color=#A0A0A0>{log.ShortStackTrace}</color>";
+                var logText = string.IsNullOrEmpty(log.ShortStackTrace)
+                    ? $"<color={iconColor}>{iconType}</color> {collapseText}{log.Condition.Replace("\n", " ")}"
+                    : $"<color={iconColor}>{iconType}</color> {collapseText}{log.Condition.Replace("\n", " ")}\n<color=#888888>{log.ShortStackTrace}</color>";
 
-                if (GUILayout.Button(logLine, styleToUse))
+                var logRect = GUILayoutUtility.GetRect(new GUIContent(logText), styleToUse, GUILayout.ExpandWidth(true));
+
+                if (GUI.Button(logRect, "", styleToUse))
                 {
                     SelectedLog = log;
                 }
+
+                var textRect = new Rect(logRect.x, logRect.y, logRect.width - 75, logRect.height);
+                GUI.Label(textRect, logText, styleToUse);
+
+                var timeStyle = new GUIStyle(styleToUse) { alignment = TextAnchor.UpperRight, normal = { textColor = new Color(0.6f, 0.6f, 0.6f) } };
+                var timeDisplayRect = new Rect(logRect.x + logRect.width - 70, logRect.y, 65, logRect.height);
+                GUI.Label(timeDisplayRect, log.TimeString, timeStyle);
             }
 
             GUILayout.EndScrollView();
         }
 
-        private void DrawLogDetail(float virtualHeight)
+        private void DrawLogDetail(float detailHeight)
         {
-            DetailScrollPos = GUILayout.BeginScrollView(DetailScrollPos, _detailBoxStyle, GUILayout.Height(virtualHeight * 0.35f));
+            GUILayout.BeginVertical(_detailBoxStyle, GUILayout.Height(detailHeight));
+
+            DetailScrollPos = GUILayout.BeginScrollView(DetailScrollPos, GUIStyle.none, GUILayout.ExpandHeight(true));
+
             if (SelectedLog != null)
             {
-                var titleColor = SelectedLog.Type == LogType.Warning ? "#FFD700" :
-                    SelectedLog.Type == LogType.Error || SelectedLog.Type == LogType.Exception ? "#FF4500" : "#FFFFFF";
+                var titleColor = SelectedLog.Type == LogType.Warning ? "#FFD54F" :
+                    SelectedLog.Type == LogType.Error || SelectedLog.Type == LogType.Exception ? "#EF5350" : "#FFFFFF";
 
-                var stackTraceText = string.IsNullOrEmpty(SelectedLog.StackTrace) ? string.Empty : $"\n<color=#DCDCDC>{SelectedLog.StackTrace}</color>";
-                GUILayout.Label($"<color={titleColor}><b>{SelectedLog.Condition}</b></color>{stackTraceText}", _detailBoxStyle);
+                var stackTraceText = string.IsNullOrEmpty(SelectedLog.StackTrace) ? string.Empty : $"\n<color=#888888>{SelectedLog.StackTrace}</color>";
+
+                var textStyle = new GUIStyle(GUI.skin.label) { richText = true, wordWrap = true, fontSize = 13 };
+                GUILayout.Label($"<color={titleColor}><b>{SelectedLog.Condition}</b></color>{stackTraceText}", textStyle);
             }
 
             GUILayout.EndScrollView();
+            GUILayout.EndVertical();
         }
 
-        private void DrawCommandSuggestions(ConsoleCommandProcessor command, float virtualHeight)
+        private void DrawCommandSuggestions(ConsoleCommandProcessor command, float detailHeight)
         {
-            GUILayout.BeginVertical(GUI.skin.box, GUILayout.Height(virtualHeight * 0.35f));
+            GUILayout.BeginVertical(_detailBoxStyle, GUILayout.Height(detailHeight));
 
-            SuggestionScrollPos = GUILayout.BeginScrollView(SuggestionScrollPos);
+            SuggestionScrollPos = GUILayout.BeginScrollView(SuggestionScrollPos, GUIStyle.none, GUILayout.ExpandHeight(true));
+
             if (command.PendingCommand == null)
             {
                 var filteredCommands = command.GetAllCommands();
@@ -429,63 +544,87 @@ namespace UniCore.Console
 
                 foreach (var cmd in filteredCommands)
                 {
-                    if (GUILayout.Button($"{cmd.TemplateUsage} - <i>{cmd.Description}</i>", _logItemStyle))
+                    var parameters = string.Join(" ", cmd.Parameters.Select(p => $"<color=#81C784><{p.ParameterType.Name}</color> <color=#B0BEC5>{p.Name}></color>"));
+                    var usage = $"<b><color=#4FC3F7>{cmd.Command}</color></b> {parameters}";
+                    var description = $"<color=#888888><i>- {cmd.Description}</i></color>";
+
+                    if (GUILayout.Button($"{usage} {description}", _logItemStyle))
                     {
                         ShowSuggestions = false;
                         SaveToHistory(cmd.Command, command);
                         OnSubmitCommand?.Invoke(cmd.Command);
-                        GUI.FocusControl("ConsoleInput");
+                        
+                        if (command.PendingCommand != null)
+                        {
+                            _shouldFocusInput = true; 
+                        }
+                        else
+                        {
+                            GUI.FocusControl(null); 
+                        }
                     }
                 }
             }
 
             GUILayout.EndScrollView();
 
-            GUILayout.BeginHorizontal(GUILayout.Height(30));
-            GUILayout.Label("🔍 Cmd:", GUILayout.Width(55), GUILayout.Height(25));
-            CommandSearchString = GUILayout.TextField(CommandSearchString, _searchFieldStyle, GUILayout.Height(25));
-            GUILayout.EndHorizontal();
+            GUILayout.Space(5);
 
+            GUILayout.BeginHorizontal(GUIStyle.none, GUILayout.Height(25));
+
+            GUI.SetNextControlName("CmdSearchBox");
+            CommandSearchString = GUILayout.TextField(CommandSearchString, _toolbarSearchStyle, GUILayout.Height(25));
+
+            if (string.IsNullOrEmpty(CommandSearchString) && GUI.GetNameOfFocusedControl() != "CmdSearchBox")
+            {
+                var rect = GUILayoutUtility.GetLastRect();
+                var prevColor = GUI.color;
+                GUI.color = new Color(1f, 1f, 1f, 0.4f);
+                GUI.Label(rect, " 🔍 Find Command...", _toolbarSearchStyle);
+                GUI.color = prevColor;
+            }
+
+            GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
 
         private void DrawCommandInputBar(ConsoleCommandProcessor command)
         {
-            GUILayout.BeginHorizontal(GUILayout.Height(40));
+            GUILayout.BeginHorizontal(GUILayout.Height(45));
 
-            if (GUILayout.Button("☰ Cmds", _toolbarButtonStyle, GUILayout.Width(70), GUILayout.Height(35)))
+            var cmdBtnStyle = ShowSuggestions ? _toolbarButtonSelectedStyle : _toolbarButtonStyle;
+            if (GUILayout.Button(">_", cmdBtnStyle, GUILayout.Width(40), GUILayout.Height(35)))
             {
                 ShowSuggestions = !ShowSuggestions;
             }
 
             GUI.SetNextControlName("ConsoleInput");
 
-            var promptText = " >";
+            var promptText = ">";
             if (command.PendingCommand != null)
             {
                 var cmdName = command.PendingCommand.CommandInfo.Command;
                 if (cmdName.Length > 6) cmdName = cmdName.Substring(0, 5) + "..";
-                promptText = $"[{cmdName}] args >";
+                promptText = $"[{cmdName}] >";
             }
 
-            GUILayout.Label(promptText, _promptLabelStyle, GUILayout.Width(promptText.Length * 9), GUILayout.Height(35));
+            GUILayout.Label(promptText, _promptLabelTransparentStyle, GUILayout.Width(promptText.Length * 10));
 
-            if (command.PendingCommand == null)
+            ConsoleInput = GUILayout.TextField(ConsoleInput, _consoleInputStyle, GUILayout.Height(35));
+
+            if (_shouldFocusInput)
             {
-                GUILayout.BeginVertical(GUILayout.Width(30), GUILayout.Height(35));
-
-                EditorGUILayout.Space(5);
-                if (GUILayout.Button("▲", _historyButtonStyle, GUILayout.Width(30), GUILayout.Height(17)))
+                GUI.FocusControl("ConsoleInput");
+                if (Event.current.type == EventType.Repaint)
                 {
-                    NavigateHistory(-1);
+                    _shouldFocusInput = false;
+                    var textEditor = (TextEditor)GUIUtility.GetStateObject(typeof(TextEditor), GUIUtility.keyboardControl);
+                    if (textEditor != null)
+                    {
+                        textEditor.SelectNone();
+                        textEditor.MoveLineEnd();
+                    }
                 }
-
-                if (GUILayout.Button("▼", _historyButtonStyle, GUILayout.Width(30), GUILayout.Height(18)))
-                {
-                    NavigateHistory(1);
-                }
-
-                GUILayout.EndVertical();
             }
 
             var currentEvent = Event.current;
@@ -503,12 +642,30 @@ namespace UniCore.Console
                 }
             }
 
-            ConsoleInput = GUILayout.TextField(ConsoleInput, _searchFieldStyle, GUILayout.Height(35));
-
             var isEnterPressed = currentEvent.type == EventType.KeyUp && (currentEvent.keyCode == KeyCode.Return || currentEvent.keyCode == KeyCode.KeypadEnter);
+            var shouldSubmit = isEnterPressed;
 
-            if (GUILayout.Button("Submit", _toolbarButtonStyle, GUILayout.Width(70), GUILayout.Height(35)) || isEnterPressed)
+            if (command.PendingCommand == null)
             {
+                if (GUILayout.Button("🕒", _toolbarButtonStyle, GUILayout.Width(40), GUILayout.Height(35)))
+                {
+                    NavigateHistory(-1);
+                }
+            }
+            else
+            {
+                if (GUILayout.Button("✖", _cancelButtonStyle, GUILayout.Width(40), GUILayout.Height(35)))
+                {
+                    OnCancelCommand?.Invoke();
+                    ConsoleInput = "";
+                    GUI.FocusControl(null); 
+                }
+            }
+
+            if (shouldSubmit)
+            {
+                Event.current.Use();
+
                 if (!string.IsNullOrWhiteSpace(ConsoleInput))
                 {
                     SaveToHistory(ConsoleInput, command);
@@ -518,16 +675,14 @@ namespace UniCore.Console
                 ConsoleInput = "";
                 _currentHistoryViewIndex = -1;
                 ShowSuggestions = false;
-                GUI.FocusControl("ConsoleInput");
-            }
 
-            if (command.PendingCommand != null)
-            {
-                if (GUILayout.Button("X", _cancelButtonStyle, GUILayout.Width(35), GUILayout.Height(35)))
+                if (command.PendingCommand != null)
                 {
-                    OnCancelCommand?.Invoke();
-                    ConsoleInput = "";
-                    GUI.FocusControl("ConsoleInput");
+                    _shouldFocusInput = true;
+                }
+                else
+                {
+                    GUI.FocusControl(null);
                 }
             }
 
