@@ -1,0 +1,20 @@
+{
+    "name": "UniPurchase",
+    "rootNamespace": "UniPurchase",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.purchasing",
+            "expression": "5.0.0",
+            "define": "ENABLE_UNI_PURCHASE"
+        }
+    ],
+    "noEngineReferences": false
+}

@@ -36,8 +36,8 @@ It helps structure large projects with clear data flow, explicit state managemen
   Lightweight, extensible debugging framework for Unity.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniDebug/README.md)
 
-* 🔄 **UniState**
-  Lightweight state machine for system and gameplay flow.
+* 💳 **UniPurchase**
+  Unity In-App purchasing.
   [![Badge](https://img.shields.io/badge/Readme-Open-Color?logo=readme)](https://github.com/huyhung1404/UniCore/blob/main/Runtime/UniState/README.md)
 
 * 🎯 **UniCommand**
