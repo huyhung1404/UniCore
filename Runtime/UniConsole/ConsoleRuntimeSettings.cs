@@ -2,7 +2,7 @@ using System;
 using UniCore.Utilities;
 using UnityEngine;
 
-namespace UniCore.Console
+namespace UniConsole
 {
     public enum TriggerMode
     {

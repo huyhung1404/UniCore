@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace UniCore.Console
+namespace UniConsole
 {
     public class ConsoleLogMessage
     {

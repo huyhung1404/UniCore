@@ -1,4 +1,4 @@
-using UniCore.Console;
+using UniConsole;
 
 namespace UniCore.Editor.Console
 {

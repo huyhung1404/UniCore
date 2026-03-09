@@ -7,7 +7,8 @@
         "UniStorage",
         "UniNotify",
         "UniUtilities",
-        "UniConsole"
+        "UniConsole",
+        "UniPurchase"
     ],
     "includePlatforms": [
         "Editor"

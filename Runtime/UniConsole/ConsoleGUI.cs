@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using UnityEngine;
 
-namespace UniCore.Console
+namespace UniConsole
 {
     public class ConsoleGUI
     {

@@ -1,16 +1,20 @@
 {
-    "name": "UniPurchase",
-    "rootNamespace": "UniPurchase",
+    "name": "UniPurchase.Editor",
+    "rootNamespace": "UniPurchase.Editor",
     "references": [
-        "Unity.Purchasing"
+        "UniPurchase"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
+    "overrideReferences": true,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "UNITY_EDITOR"
+    ],
     "versionDefines": [
         {
             "name": "com.unity.purchasing",

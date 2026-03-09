@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Profiling;
 
-namespace UniCore.Console
+namespace UniConsole
 {
     public class ConsoleManager : MonoBehaviour
     {

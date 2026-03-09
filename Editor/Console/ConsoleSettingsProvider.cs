@@ -1,4 +1,4 @@
-using UniCore.Console;
+using UniConsole;
 using UnityEditor;
 using UnityEngine;
 

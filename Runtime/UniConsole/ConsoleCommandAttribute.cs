@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 
-namespace UniCore.Console
+namespace UniConsole
 {
     [AttributeUsage(AttributeTargets.Method)]
     public class ConsoleCommandAttribute : System.Attribute

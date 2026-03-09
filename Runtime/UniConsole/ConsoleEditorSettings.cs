@@ -1,6 +1,6 @@
 using UniCore.Utilities;
 
-namespace UniCore.Console
+namespace UniConsole
 {
 #if UNITY_EDITOR
     [UnityEditor.FilePath("ProjectSettings/UniCore_ConsoleSettings.asset", UnityEditor.FilePathAttribute.Location.ProjectFolder)]
