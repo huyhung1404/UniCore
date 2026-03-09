@@ -1,100 +1,193 @@
 #if ENABLE_UNI_PURCHASE
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Purchasing;
 
 namespace UniPurchase
 {
-    public sealed class PurchaseService : MonoBehaviour
+    public sealed class PurchaseService
     {
+        private static PurchaseService s_instance;
+        private static PurchaseService Instance => s_instance ??= new PurchaseService();
+
         private StoreController _storeController;
         private PurchaseValidator _validator;
         private SubscriptionHelper _subscriptionHelper;
         private PurchaseConfig _config;
-        
+
         private bool _isInitialized;
         private bool _isInitializing;
-        
+
         private bool _isNativeStoreActive;
-        private int _activeTransactions; 
-        
+        private int _activeTransactions;
+
         private readonly Dictionary<string, PendingOrder> _unconfirmedOrders = new Dictionary<string, PendingOrder>();
 
-        public bool IsProcessing => _activeTransactions > 0;
-        public bool IsInitialized => _isInitialized;
+        private static PurchaseLifecycleTracker s_lifecycleTracker;
 
-        public async Task InitializeAsync(byte[] appleTangleData = null, byte[] googleTangleData = null)
+        private MonoBehaviour _cachedLifecycleHost;
+        private byte[] _cachedAppleTangle;
+        private byte[] _cachedGoogleTangle;
+        private bool _hasCachedDependencies;
+
+        public static bool IsProcessing => Instance._activeTransactions > 0;
+        public static bool IsInitialized => Instance._isInitialized;
+
+        private PurchaseService()
         {
-            if (_isInitialized || _isInitializing) return;
-            
-            _isInitializing = true;
+        }
 
-            _config = Resources.Load<PurchaseConfig>(PurchaseConfig.k_FileName);
-            if (_config == null)
+        public static (string originalPrice, string discountedPrice, bool hasDiscount) GetPriceInfo(string productId)
+        {
+            var inst = Instance;
+            if (string.IsNullOrEmpty(productId)) return ("$0.00", "$0.00", false);
+
+            var productData = inst._config?.GetProductData(productId);
+            var discountPercent = productData != null ? productData.DiscountPercent : 0f;
+            var hasDiscount = discountPercent > 0f;
+
+#if UNITY_EDITOR
+            if (productData != null)
             {
-                PurchaseEventDispatcher.DispatchInitializeFailed("Missing PurchaseConfig in Resources.");
-                _isInitializing = false;
+                var simPrice = productData.Price;
+                var simOriginal = $"${simPrice:0.00}";
+                if (!hasDiscount) return (simOriginal, simOriginal, false);
+                var simDiscounted = simPrice * (1f - discountPercent);
+                return (simOriginal, $"${simDiscounted:0.00}", true);
+            }
+#endif
+
+            if (!inst._isInitialized || inst._storeController == null) return ("---", "---", false);
+
+            var targetProduct = inst._storeController.GetProducts().FirstOrDefault(p => p.definition.id == productId);
+            if (targetProduct == null) return ("---", "---", false);
+
+            var originalString = targetProduct.metadata.localizedPriceString;
+            if (!hasDiscount) return (originalString, originalString, false);
+
+            var decimalPrice = targetProduct.metadata.localizedPrice;
+            var currencyCode = targetProduct.metadata.isoCurrencyCode;
+            var finalDecimalPrice = decimalPrice * (1m - (decimal)discountPercent);
+
+            var discountedString = $"{finalDecimalPrice:0.##} {currencyCode}";
+            return (originalString, discountedString, true);
+        }
+
+        public static async Task InitializeAsync(MonoBehaviour lifecycleHost, byte[] appleTangleData, byte[] googleTangleData)
+        {
+            if (lifecycleHost == null)
+            {
+                var error = "Lifecycle Host (MonoBehaviour) cannot be null.";
+                Debug.LogError($"[UniPurchase] {error}");
+                PurchaseEventDispatcher.DispatchInitializeFailed(error);
                 return;
             }
 
-            if (!_config.IsEnabled)
+            if (appleTangleData == null || googleTangleData == null)
             {
-                Debug.LogWarning("[UniPurchase] Purchase System is disabled in settings.");
-                _isInitializing = false;
+                var error = "Tangle Data cannot be null for Receipt Validation.";
+                Debug.LogError($"[UniPurchase] {error}");
+                PurchaseEventDispatcher.DispatchInitializeFailed(error);
                 return;
             }
-            
-            _config.InitializeCache();
-            _validator = new PurchaseValidator(appleTangleData, googleTangleData);
-            _storeController = UnityIAPServices.StoreController();
 
-            _storeController.OnProductsFetched += HandleProductsFetched;
-            _storeController.OnProductsFetchFailed += HandleProductsFetchFailed;
-            _storeController.OnPurchasePending += HandlePurchasePending;
-            _storeController.OnPurchaseDeferred += HandlePurchaseDeferred;
-            _storeController.OnPurchaseFailed += HandlePurchaseFailed;
-            
-            _storeController.OnPurchasesFetched += HandlePurchasesFetched;
-            _storeController.OnPurchasesFetchFailed += HandlePurchasesFetchFailed;
+            var inst = Instance;
+
+            inst._cachedLifecycleHost = lifecycleHost;
+            inst._cachedAppleTangle = appleTangleData;
+            inst._cachedGoogleTangle = googleTangleData;
+            inst._hasCachedDependencies = true;
+
+            if (inst._isInitialized || inst._isInitializing) return;
+            inst._isInitializing = true;
+
+#if UNITY_EDITOR
+            inst._config = EditorPurchaseConfig.CreateRuntimeInstance();
+#else
+            inst._config = Resources.Load<PurchaseConfig>(PurchaseConfig.k_FileName);
+#endif
+
+            if (inst._config == null)
+            {
+                PurchaseEventDispatcher.DispatchInitializeFailed("Missing PurchaseConfig.");
+                inst._isInitializing = false;
+                return;
+            }
+
+            if (!inst._config.IsEnabled)
+            {
+                Debug.Log("[UniPurchase] Purchase System is disabled in settings.");
+                inst._isInitializing = false;
+                return;
+            }
+
+            if (s_lifecycleTracker == null)
+            {
+                s_lifecycleTracker = lifecycleHost.gameObject.AddComponent<PurchaseLifecycleTracker>();
+                s_lifecycleTracker.hideFlags = HideFlags.HideInInspector;
+            }
+
+            inst._config.InitializeCache();
+            inst._validator = new PurchaseValidator(appleTangleData, googleTangleData);
+            inst._storeController = UnityIAPServices.StoreController();
+
+            inst._storeController.OnProductsFetched += inst.HandleProductsFetched;
+            inst._storeController.OnProductsFetchFailed += inst.HandleProductsFetchFailed;
+            inst._storeController.OnPurchasePending += inst.HandlePurchasePending;
+            inst._storeController.OnPurchaseDeferred += inst.HandlePurchaseDeferred;
+            inst._storeController.OnPurchaseFailed += inst.HandlePurchaseFailed;
+            inst._storeController.OnPurchasesFetched += inst.HandlePurchasesFetched;
+            inst._storeController.OnPurchasesFetchFailed += inst.HandlePurchasesFetchFailed;
 
             try
             {
-                await _storeController.Connect();
+                await inst._storeController.Connect();
 
                 var initialProducts = new List<ProductDefinition>();
-                foreach (var product in _config.Products)
+                foreach (var product in inst._config.Products)
                 {
                     initialProducts.Add(new ProductDefinition(product.ProductId, product.ProductType));
                 }
 
-                _storeController.FetchProducts(initialProducts);
+                inst._storeController.FetchProducts(initialProducts);
             }
             catch (Exception ex)
             {
-                _isInitializing = false;
+                inst._isInitializing = false;
                 PurchaseEventDispatcher.DispatchInitializeFailed(ex.Message);
             }
         }
 
-        public async void BuyProduct(string productId)
+        public static async Task BuyProduct(string productId)
         {
             if (string.IsNullOrEmpty(productId)) return;
 
-            if (!_isInitialized)
+            if (IsProcessing)
             {
-                Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery...");
-                await InitializeAsync();
+                Debug.LogWarning("[UniPurchase] A transaction is already in progress.");
+                return;
+            }
 
-                if (!_isInitialized)
+            var inst = Instance;
+            if (!inst._isInitialized)
+            {
+                if (inst._hasCachedDependencies)
                 {
-                    PurchaseEventDispatcher.DispatchPurchaseFailed(productId, "Store is not initialized. Please check network.");
+                    Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery using cached dependencies...");
+                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedAppleTangle, inst._cachedGoogleTangle);
+                }
+
+                if (!inst._isInitialized)
+                {
+                    PurchaseEventDispatcher.DispatchPurchaseFailed(productId, "Store is not initialized. Please check network connection.");
                     return;
                 }
             }
-            
-            var targetProduct = _storeController.products.WithID(productId);
+
+            var targetProduct = inst._storeController.GetProducts().FirstOrDefault(p => p.definition.id == productId);
             if (targetProduct == null)
             {
                 var error = $"Product ID {productId} not found in Store.";
@@ -103,76 +196,108 @@ namespace UniPurchase
                 return;
             }
 
-            if (IsProcessing)
-            {
-                Debug.LogWarning("[UniPurchase] A transaction is already in progress.");
-                return;
-            }
-
-            BeginTransactionFlow();
-            _storeController.PurchaseProduct(targetProduct);
+            inst.BeginTransactionFlow();
+            inst._storeController.PurchaseProduct(targetProduct);
         }
 
-        public async void RestorePurchases()
+        public static async Task RestorePurchases()
         {
             if (IsProcessing) return;
 
-            if (!_isInitialized)
+            var inst = Instance;
+            if (!inst._isInitialized)
             {
-                Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery...");
-                await InitializeAsync();
-
-                if (!_isInitialized)
+                if (inst._hasCachedDependencies)
                 {
-                    PurchaseEventDispatcher.DispatchPurchaseFailed("RESTORE", "Store is not initialized. Please check network.");
+                    Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery using cached dependencies...");
+                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedAppleTangle, inst._cachedGoogleTangle);
+                }
+
+                if (!inst._isInitialized)
+                {
+                    PurchaseEventDispatcher.DispatchPurchaseFailed("RESTORE", "Store is not initialized. Please check network connection.");
                     return;
                 }
             }
 
-            BeginTransactionFlow();
-            _storeController.FetchPurchases(); 
+            inst.BeginTransactionFlow();
+            inst._storeController.FetchPurchases();
         }
-        
-        public void ConfirmTransaction(string transactionId)
+
+        public static void ConfirmTransaction(string transactionId)
         {
             if (string.IsNullOrEmpty(transactionId)) return;
-
-            if (_unconfirmedOrders.TryGetValue(transactionId, out var pendingOrder))
+            var inst = Instance;
+            if (inst._unconfirmedOrders.TryGetValue(transactionId, out var pendingOrder))
             {
-                _storeController.ConfirmPurchase(pendingOrder);
-                _unconfirmedOrders.Remove(transactionId);
+                inst._storeController?.ConfirmPurchase(pendingOrder);
+                inst._unconfirmedOrders.Remove(transactionId);
                 Debug.Log($"[UniPurchase] Transaction {transactionId} permanently confirmed.");
             }
         }
 
-        public bool CheckIsSubscriptionActive(string productId)
+        public static async Task<bool> CheckIsSubscriptionActiveAsync(string productId)
         {
-            if (!_isInitialized || _subscriptionHelper == null) return false;
-            return _subscriptionHelper.IsSubscriptionActive(productId);
-        }
-        
-        private void OnApplicationPause(bool isPaused)
-        {
-            if (isPaused && IsProcessing)
-            {
-                _isNativeStoreActive = true;
-            }
-            else if (!isPaused && _isNativeStoreActive)
-            {
-                _isNativeStoreActive = false;
-                HandleNativeStoreResumeAsync();
-            }
+            var inst = Instance;
+            if (!inst._isInitialized || inst._subscriptionHelper == null) return false;
+            return await inst._subscriptionHelper.IsSubscriptionActiveAsync(productId);
         }
 
-        private async void HandleNativeStoreResumeAsync()
+        public static void OnApplicationPause(bool isPaused)
         {
-            await Task.Delay(TimeSpan.FromSeconds(3));
-
-            if (IsProcessing)
+#if UNITY_IOS || UNITY_EDITOR
+            var inst = Instance;
+            if (isPaused && IsProcessing) inst._isNativeStoreActive = true;
+            else if (!isPaused && inst._isNativeStoreActive)
             {
-                Debug.LogWarning("[UniPurchase] OS returned but no callback fired. Silently unblocking UI.");
-                _activeTransactions = 0;
-                PurchaseEventDispatcher.DispatchTransactionEnd();
+                inst._isNativeStoreActive = false;
+                _ = inst.HandleNativeStoreResumeAsync();
+            }
+#endif
+        }
+
+        public static void OnApplicationFocus(bool hasFocus)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            var inst = Instance;
+            if (!hasFocus && IsProcessing) inst._isNativeStoreActive = true;
+            else if (hasFocus && inst._isNativeStoreActive)
+            {
+                inst._isNativeStoreActive = false;
+                _ = inst.HandleNativeStoreResumeAsync();
+            }
+#endif
+        }
+
+        public static void Dispose()
+        {
+            var inst = s_instance;
+            if (inst == null || inst._storeController == null) return;
+
+            inst._storeController.OnProductsFetched -= inst.HandleProductsFetched;
+            inst._storeController.OnProductsFetchFailed -= inst.HandleProductsFetchFailed;
+            inst._storeController.OnPurchasePending -= inst.HandlePurchasePending;
+            inst._storeController.OnPurchaseDeferred -= inst.HandlePurchaseDeferred;
+            inst._storeController.OnPurchaseFailed -= inst.HandlePurchaseFailed;
+            inst._storeController.OnPurchasesFetched -= inst.HandlePurchasesFetched;
+            inst._storeController.OnPurchasesFetchFailed -= inst.HandlePurchasesFetchFailed;
+        }
+
+        private async Task HandleNativeStoreResumeAsync()
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+                if (IsProcessing)
+                {
+                    Debug.LogWarning("[UniPurchase] OS returned but no callback fired. Silently unblocking UI.");
+                    _activeTransactions = 0;
+                    PurchaseEventDispatcher.DispatchTransactionEnd();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[UniPurchase] Native Resume handler interrupted: {ex.Message}");
             }
         }
 
@@ -186,9 +311,8 @@ namespace UniPurchase
         {
             _activeTransactions--;
             if (_activeTransactions > 0) return;
-
             _activeTransactions = 0;
-            PurchaseEventDispatcher.DispatchTransactionEnd(); 
+            PurchaseEventDispatcher.DispatchTransactionEnd();
         }
 
         private void HandleProductsFetched(IReadOnlyList<Product> products)
@@ -199,18 +323,18 @@ namespace UniPurchase
             PurchaseEventDispatcher.DispatchInitializeSuccess();
         }
 
-        private void HandleProductsFetchFailed(string reason)
+        private void HandleProductsFetchFailed(ProductFetchFailed failed)
         {
             _isInitializing = false;
-            PurchaseEventDispatcher.DispatchInitializeFailed(reason);
+            PurchaseEventDispatcher.DispatchInitializeFailed(failed.FailureReason);
         }
 
         private void HandlePurchasePending(PendingOrder pendingOrder)
         {
-            var receipt = pendingOrder.Receipt;
-            var productInfo = pendingOrder.Info;
-            var productId = productInfo.ProductId;
-            var transactionId = productInfo.TransactionID;
+            var receipt = pendingOrder.Info.Receipt;
+            var transactionId = pendingOrder.Info.TransactionID;
+            var firstItem = pendingOrder.CartOrdered.Items().FirstOrDefault();
+            var productId = firstItem != null ? firstItem.Product.definition.id : "Unknown";
 
             if (!IsProcessing) BeginTransactionFlow();
 
@@ -223,28 +347,30 @@ namespace UniPurchase
             }
 
             _unconfirmedOrders[transactionId] = pendingOrder;
-
-            PurchaseEventDispatcher.DispatchPurchaseSuccess(productId, transactionId); 
+            PurchaseEventDispatcher.DispatchPurchaseSuccess(productId, transactionId);
             EndTransactionFlow();
         }
 
-        private void HandlePurchaseDeferred(Product product)
+        private void HandlePurchaseDeferred(DeferredOrder deferredOrder)
         {
             PurchaseEventDispatcher.DispatchTransactionDeferred();
             EndTransactionFlow();
         }
 
-        private void HandlePurchaseFailed(Product product, string reason)
+        private void HandlePurchaseFailed(FailedOrder failedOrder)
         {
-            var productId = product != null ? product.definition.id : "Unknown";
+            var firstItem = failedOrder.CartOrdered.Items().FirstOrDefault();
+            var productId = firstItem != null ? firstItem.Product.definition.id : "Unknown";
+            var reason = string.IsNullOrEmpty(failedOrder.Details) ? failedOrder.FailureReason.ToString() : failedOrder.Details;
             PurchaseEventDispatcher.DispatchPurchaseFailed(productId, reason);
             EndTransactionFlow();
         }
-        
+
         private void HandlePurchasesFetched(Orders orders)
         {
-            var hasPendingOrders = orders.Pending != null && orders.Pending.Count > 0;
-            
+            var pendingOrders = orders.PendingOrders;
+            var hasPendingOrders = pendingOrders != null && pendingOrders.Count > 0;
+
             if (!hasPendingOrders)
             {
                 _activeTransactions = 0;
@@ -253,41 +379,34 @@ namespace UniPurchase
                 return;
             }
 
-            Debug.Log($"[UniPurchase] Restore processing {orders.Pending.Count} orders.");
-
+            Debug.Log($"[UniPurchase] Restore processing {pendingOrders.Count} orders.");
             _activeTransactions++;
-
-            foreach (var pendingOrder in orders.Pending)
+            foreach (var pendingOrder in pendingOrders)
             {
                 HandlePurchasePending(pendingOrder);
             }
 
-            EndTransactionFlow(); 
+            EndTransactionFlow();
         }
 
-        private void HandlePurchasesFetchFailed(string reason)
+        private void HandlePurchasesFetchFailed(PurchasesFetchFailureDescription failureDescription)
         {
-            if (IsProcessing) 
+            if (IsProcessing)
             {
                 _activeTransactions = 0;
                 PurchaseEventDispatcher.DispatchTransactionEnd();
             }
-            
+
+            var reason = string.IsNullOrEmpty(failureDescription.Message) ? failureDescription.FailureReason.ToString() : failureDescription.Message;
             Debug.LogError($"[UniPurchase] Restore failed: {reason}");
             PurchaseEventDispatcher.DispatchPurchaseFailed("RESTORE", reason);
         }
+    }
 
-        private void OnDestroy()
-        {
-            if (_storeController == null) return;
-            _storeController.OnProductsFetched -= HandleProductsFetched;
-            _storeController.OnProductsFetchFailed -= HandleProductsFetchFailed;
-            _storeController.OnPurchasePending -= HandlePurchasePending;
-            _storeController.OnPurchaseDeferred -= HandlePurchaseDeferred;
-            _storeController.OnPurchaseFailed -= HandlePurchaseFailed;
-            _storeController.OnPurchasesFetched -= HandlePurchasesFetched;
-            _storeController.OnPurchasesFetchFailed -= HandlePurchasesFetchFailed;
-        }
+    public class PurchaseLifecycleTracker : MonoBehaviour
+    {
+        private void OnApplicationPause(bool isPaused) => PurchaseService.OnApplicationPause(isPaused);
+        private void OnApplicationFocus(bool hasFocus) => PurchaseService.OnApplicationFocus(hasFocus);
     }
 }
 #endif

@@ -1,13 +1,17 @@
 using UnityEditor;
 using UnityEngine;
 #if ENABLE_UNI_PURCHASE
-
+using UnityEditorInternal;
 #endif
 
 namespace UniPurchase.Editor
 {
     public static class PurchaseConfigProvider
     {
+#if ENABLE_UNI_PURCHASE
+        private static ReorderableList s_productList;
+#endif
+
         [SettingsProvider]
         public static SettingsProvider CreateProvider()
         {
@@ -51,6 +55,91 @@ namespace UniPurchase.Editor
             var enableProp = serializedObject.FindProperty("m_isEnabled");
             var isSystemEnabled = DrawMasterToggle(enableProp);
             if (!isSystemEnabled) return;
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var icon = EditorGUIUtility.IconContent("d_FilterByLabel") ?? EditorGUIUtility.IconContent("SettingsIcon");
+
+                if (icon != null && icon.image != null)
+                {
+                    GUILayout.Label(icon, GUILayout.Width(20), GUILayout.Height(20));
+                }
+
+                GUILayout.Label("In-App Products Configuration", new GUIStyle(EditorStyles.boldLabel) { fontSize = 13, alignment = TextAnchor.MiddleLeft });
+            }
+
+            EditorGUILayout.Space(5);
+
+            var productsProp = serializedObject.FindProperty("m_products");
+
+            if (s_productList == null || s_productList.serializedProperty.serializedObject != serializedObject)
+            {
+                InitializeReorderableList(serializedObject, productsProp);
+            }
+
+            s_productList?.DoLayoutList();
+        }
+
+        private static void InitializeReorderableList(SerializedObject serializedObject, SerializedProperty productsProp)
+        {
+            s_productList = new ReorderableList(serializedObject, productsProp, true, true, true, true);
+
+            s_productList.drawHeaderCallback = rect => { EditorGUI.LabelField(new Rect(rect.x + 15, rect.y, rect.width, rect.height), "Product List"); };
+
+            s_productList.elementHeightCallback = _ => (EditorGUIUtility.singleLineHeight * 2) + 8f;
+
+            s_productList.drawElementBackgroundCallback = (rect, index, active, focused) =>
+            {
+                if (active)
+                {
+                    var activeColor = focused ? new Color(0.17f, 0.36f, 0.53f) : new Color(0.3f, 0.3f, 0.3f, 0.5f);
+                    EditorGUI.DrawRect(rect, activeColor);
+                }
+                else if (index % 2 == 0)
+                {
+                    EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.05f));
+                }
+            };
+
+            s_productList.drawElementCallback = (rect, index, _, _) =>
+            {
+                var element = s_productList.serializedProperty.GetArrayElementAtIndex(index);
+                rect.y += 3;
+
+                var idProp = element.FindPropertyRelative("m_productId");
+                var typeProp = element.FindPropertyRelative("m_productType");
+                var priceProp = element.FindPropertyRelative("m_price");
+                var discountProp = element.FindPropertyRelative("m_discountPercent");
+
+                var halfWidth = rect.width / 2f;
+                var padding = 5f;
+
+                var line1Rect = new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight);
+                var idRect = new Rect(line1Rect.x, line1Rect.y, halfWidth - padding, line1Rect.height);
+                var typeRect = new Rect(line1Rect.x + halfWidth, line1Rect.y, halfWidth, line1Rect.height);
+
+                EditorGUI.PropertyField(idRect, idProp, GUIContent.none);
+                if (string.IsNullOrEmpty(idProp.stringValue))
+                {
+                    EditorGUI.LabelField(new Rect(idRect.x + 4, idRect.y, idRect.width, idRect.height), "Enter Product ID...", EditorStyles.centeredGreyMiniLabel);
+                }
+
+                EditorGUI.PropertyField(typeRect, typeProp, GUIContent.none);
+
+                var line2Rect = new Rect(rect.x, rect.y + EditorGUIUtility.singleLineHeight + 2, rect.width, EditorGUIUtility.singleLineHeight);
+                var priceRect = new Rect(line2Rect.x, line2Rect.y, halfWidth - padding, line2Rect.height);
+                var discountRect = new Rect(line2Rect.x + halfWidth, line2Rect.y, halfWidth, line2Rect.height);
+
+                var originalLabelWidth = EditorGUIUtility.labelWidth;
+
+                EditorGUIUtility.labelWidth = 45;
+                EditorGUI.PropertyField(priceRect, priceProp, new GUIContent("Price", "Simulated Price for Editor UI"));
+
+                EditorGUIUtility.labelWidth = 65;
+                EditorGUI.PropertyField(discountRect, discountProp, new GUIContent("Discount", "0.0 = No discount, 0.5 = 50% off"));
+
+                EditorGUIUtility.labelWidth = originalLabelWidth;
+            };
         }
 
         public static bool DrawMasterToggle(SerializedProperty enableProp)

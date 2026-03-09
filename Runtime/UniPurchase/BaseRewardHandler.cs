@@ -3,16 +3,14 @@ using UnityEngine;
 
 namespace UniPurchase
 {
-    public abstract class BaseRewardHandler : MonoBehaviour
+    public abstract class BaseRewardHandler
     {
-        [SerializeField] private PurchaseService m_purchaseService;
-
-        protected virtual void OnEnable()
+        public virtual void Initialize()
         {
             PurchaseEventDispatcher.OnPurchaseSuccess += HandlePurchaseSuccess;
         }
-
-        protected virtual void OnDisable()
+        
+        public virtual void Dispose()
         {
             PurchaseEventDispatcher.OnPurchaseSuccess -= HandlePurchaseSuccess;
         }
@@ -24,7 +22,7 @@ namespace UniPurchase
             if (IsTransactionProcessedInSave(transactionId))
             {
                 Debug.LogWarning($"[UniPurchase] Transaction {transactionId} already processed.");
-                m_purchaseService?.ConfirmTransaction(transactionId);
+                PurchaseService.ConfirmTransaction(transactionId);
                 return;
             }
 
@@ -34,13 +32,11 @@ namespace UniPurchase
             var isSaveSuccess = SaveTransactionAndGameData(transactionId);
             if (!isSaveSuccess) return; 
 
-            m_purchaseService?.ConfirmTransaction(transactionId);
+            PurchaseService.ConfirmTransaction(transactionId);
         }
 
         protected abstract bool IsTransactionProcessedInSave(string transactionId);
-
         protected abstract bool SaveTransactionAndGameData(string transactionId);
-
         protected abstract bool ProcessProjectSpecificRewards(string productId);
     }
 }
