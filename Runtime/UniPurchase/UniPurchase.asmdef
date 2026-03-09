@@ -2,7 +2,18 @@
     "name": "UniPurchase",
     "rootNamespace": "UniPurchase",
     "references": [
-        "Unity.Purchasing"
+        "Unity.Purchasing",
+        "Unity.Purchasing.Security",
+        "Unity.Purchasing.SecurityCore",
+        "Unity.Purchasing.TransactionVerifier",
+        "Unity.Purchasing.Utilities",
+        "Unity.Purchasing.Stores",
+        "Unity.Purchasing.Codeless",
+        "Unity.Purchasing.Apple",
+        "Unity.Purchasing.AppleMacos",
+        "Unity.Purchasing.AppleMacosStub",
+        "Unity.Purchasing.AppleStub",
+        "Unity.Purchasing.SecurityStub"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
