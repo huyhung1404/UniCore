@@ -1,5 +1,6 @@
 ﻿#if ENABLE_UNI_PURCHASE
 using System.Reflection;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -91,14 +92,14 @@ namespace UniPurchase.Tests
         // ==========================================
 
         [Test]
-        public void PurchaseService_CheckSubscription_When_Not_Initialized_Should_Return_False()
+        public async Task PurchaseService_CheckSubscription_When_Not_Initialized_Should_Return_False()
         {
             // ARRANGE: Đảm bảo Service hoàn toàn trắng tinh (chưa Init)
             var instanceField = typeof(PurchaseService).GetField("s_instance", BindingFlags.NonPublic | BindingFlags.Static);
             instanceField?.SetValue(null, null);
 
             // ACT: Cố tình hỏi xem user có đang là VIP không khi game vừa mở (chưa kết nối Apple/Google)
-            var isActive = PurchaseService.CheckIsSubscriptionActive("com.vip.month");
+            var isActive = await PurchaseService.CheckIsSubscriptionActiveAsync("com.vip.month");
 
             // ASSERT: Phải trả về false an toàn thay vì văng NullReferenceException
             Assert.IsFalse(isActive, "Should safely return false if system is offline or not initialized.");
