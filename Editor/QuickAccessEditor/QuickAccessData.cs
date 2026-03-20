@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace UniCore.Editor.QuickAccess
 {
@@ -8,7 +9,7 @@ namespace UniCore.Editor.QuickAccess
     {
         public int FavoriteLimit = 8;
         public List<GroupData> Groups = new();
-        public List<FavoriteStat> Stats = new();
+        [NonSerialized, JsonIgnore] public List<FavoriteStat> Stats;
     }
 
     [Serializable]
