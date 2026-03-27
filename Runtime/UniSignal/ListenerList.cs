@@ -137,16 +137,25 @@ namespace UniCore.Signal
             EnterWriteLock(ref spinWait);
             try
             {
+                if (Volatile.Read(ref _dispatchCount) > 0)
+#else
+            if (_dispatchCount > 0)
 #endif
-            var idx = _list.IndexOf(listener);
-            if (idx >= 0)
             {
-                _list[idx] = null;
-                _needsCleanup = true;
+                var idx = _list.IndexOf(listener);
+                if (idx >= 0)
+                {
+                    _list[idx] = null;
+                    _needsCleanup = true;
+                }
+                else
+                {
+                    _pendingAdds.Remove(listener);
+                }
             }
             else
             {
-                _pendingAdds.Remove(listener);
+                _list.Remove(listener);
             }
 #if SIGNAL_THREAD_SAFE
             }
