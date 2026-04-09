@@ -20,6 +20,7 @@ namespace UniCore.Signal
 
     internal sealed class ListenerList<T> : IListenerList where T : ISignalEvent
     {
+        private static readonly bool s_isConsumableType = typeof(IConsumableSignal).IsAssignableFrom(typeof(T));
 #if UNITY_EDITOR
         public Type SignalType => typeof(T);
 #endif
@@ -170,7 +171,10 @@ namespace UniCore.Signal
 #else
             _dispatchCount++;
 #endif
-            var consumable = signal as IConsumableSignal;
+            
+            IConsumableSignal consumable = null;
+            if (s_isConsumableType) consumable = signal as IConsumableSignal;
+            
             var count = _list.Count;
 
             for (var i = 0; i < count; i++)
