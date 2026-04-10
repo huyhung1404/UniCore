@@ -13,7 +13,7 @@ namespace UniConsole
         {
             RuntimeSettings = ConsoleRuntimeSettings.GetInstance(ConsoleRuntimeSettings.k_FileName).CurrentData;
             
-            if (!RuntimeSettings.m_isSystemEnabled) return;
+            if (RuntimeSettings == null || !RuntimeSettings.m_isSystemEnabled) return;
 
             IsDeveloperMode = PlayerPrefs.GetInt("unicore_flag", 0) == 1;
             go = new GameObject("Developer Authenticator");
