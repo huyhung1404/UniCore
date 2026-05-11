@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 #if ENABLE_UNI_PURCHASE
+using System.Collections.Generic;
 using UnityEditorInternal;
 #endif
 
@@ -10,6 +11,19 @@ namespace UniPurchase.Editor
     {
 #if ENABLE_UNI_PURCHASE
         private static ReorderableList s_productList;
+        private static readonly Dictionary<int, bool> s_foldoutStates = new Dictionary<int, bool>();
+        private static Dictionary<int, string> s_validationErrors = new Dictionary<int, string>();
+
+        private static readonly HashSet<string> s_basePropertyNames = new HashSet<string>
+        {
+            "m_Script", "m_ObjectHideFlags", "m_Name",
+            "m_productId", "m_productType", "m_discountPercent", "m_price"
+        };
+
+        private const float k_Padding = 3f;
+        private const float k_LineSpacing = 2f;
+        private const float k_ErrorBoxHeight = 26f;
+        private static bool s_headerDragHighlight;
 #endif
 
         [SettingsProvider]
@@ -72,6 +86,8 @@ namespace UniPurchase.Editor
 
             var productsProp = serializedObject.FindProperty("m_products");
 
+            s_validationErrors = ValidateProducts(productsProp);
+
             if (s_productList == null || s_productList.serializedProperty.serializedObject != serializedObject)
             {
                 InitializeReorderableList(serializedObject, productsProp);
@@ -80,22 +96,97 @@ namespace UniPurchase.Editor
             s_productList?.DoLayoutList();
         }
 
+        private static Dictionary<int, string> ValidateProducts(SerializedProperty productsProp)
+        {
+            var errors = new Dictionary<int, string>();
+            var seenObjects = new Dictionary<int, int>();
+            var seenIds = new Dictionary<string, int>();
+
+            for (int i = 0; i < productsProp.arraySize; i++)
+            {
+                var element = productsProp.GetArrayElementAtIndex(i);
+                var productData = element.objectReferenceValue as ProductData;
+                if (productData == null) continue;
+
+                int instanceId = productData.GetInstanceID();
+                if (seenObjects.TryGetValue(instanceId, out var firstRefIdx))
+                {
+                    errors[i] = $"Duplicate reference! Same as element [{firstRefIdx}]";
+                    continue;
+                }
+
+                seenObjects[instanceId] = i;
+
+                string productId = productData.ProductId;
+                if (string.IsNullOrEmpty(productId)) continue;
+
+                if (seenIds.TryGetValue(productId, out var firstIdIdx))
+                {
+                    errors[i] = $"Duplicate Product ID '{productId}'! Same as element [{firstIdIdx}]";
+                    if (!errors.ContainsKey(firstIdIdx))
+                        errors[firstIdIdx] = $"Duplicate Product ID '{productId}'!";
+                }
+                else
+                {
+                    seenIds[productId] = i;
+                }
+            }
+
+            return errors;
+        }
+
         private static void InitializeReorderableList(SerializedObject serializedObject, SerializedProperty productsProp)
         {
             s_productList = new ReorderableList(serializedObject, productsProp, true, true, true, true);
 
-            s_productList.drawHeaderCallback = rect => { EditorGUI.LabelField(new Rect(rect.x + 15, rect.y, rect.width, rect.height), "Product List"); };
+            s_productList.drawHeaderCallback = rect =>
+            {
+                HandleHeaderDragAndDrop(rect);
+                EditorGUI.LabelField(new Rect(rect.x + 15, rect.y, rect.width, rect.height), "Product List");
+            };
 
-            s_productList.elementHeightCallback = _ => (EditorGUIUtility.singleLineHeight * 2) + 8f;
+            s_productList.elementHeightCallback = index =>
+            {
+                var lineHeight = EditorGUIUtility.singleLineHeight;
+                float height = k_Padding * 2 + lineHeight + k_LineSpacing;
+
+                if (index >= s_productList.serializedProperty.arraySize) return height;
+
+                var element = s_productList.serializedProperty.GetArrayElementAtIndex(index);
+                var productData = element.objectReferenceValue as ProductData;
+                if (productData == null) return height;
+
+                height += (lineHeight + k_LineSpacing) * 2;
+
+                if (s_validationErrors.ContainsKey(index))
+                    height += k_ErrorBoxHeight + k_LineSpacing;
+
+                if (productData.GetType() != typeof(ProductData))
+                {
+                    height += lineHeight + k_LineSpacing;
+                    int instanceId = productData.GetInstanceID();
+                    if (s_foldoutStates.TryGetValue(instanceId, out var isOpen) && isOpen)
+                        height += CountDerivedProperties(productData) * (lineHeight + k_LineSpacing);
+                }
+
+                return height;
+            };
 
             s_productList.drawElementBackgroundCallback = (rect, index, active, focused) =>
             {
+                bool hasError = s_validationErrors.ContainsKey(index);
+
+                if (hasError)
+                {
+                    EditorGUI.DrawRect(rect, new Color(0.8f, 0.15f, 0.15f, 0.18f));
+                }
+
                 if (active)
                 {
                     var activeColor = focused ? new Color(0.17f, 0.36f, 0.53f) : new Color(0.3f, 0.3f, 0.3f, 0.5f);
                     EditorGUI.DrawRect(rect, activeColor);
                 }
-                else if (index % 2 == 0)
+                else if (!hasError && index % 2 == 0)
                 {
                     EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 0.05f));
                 }
@@ -104,19 +195,39 @@ namespace UniPurchase.Editor
             s_productList.drawElementCallback = (rect, index, _, _) =>
             {
                 var element = s_productList.serializedProperty.GetArrayElementAtIndex(index);
-                rect.y += 3;
+                var productData = element.objectReferenceValue as ProductData;
 
-                var idProp = element.FindPropertyRelative("m_productId");
-                var typeProp = element.FindPropertyRelative("m_productType");
-                var priceProp = element.FindPropertyRelative("m_price");
-                var discountProp = element.FindPropertyRelative("m_discountPercent");
+                float y = rect.y + k_Padding;
+                var lineHeight = EditorGUIUtility.singleLineHeight;
+
+                const float removeButtonWidth = 20f;
+                var objFieldRect = new Rect(rect.x, y, rect.width - removeButtonWidth - 2f, lineHeight);
+                EditorGUI.PropertyField(objFieldRect, element, GUIContent.none);
+
+                var removeBtnRect = new Rect(rect.x + rect.width - removeButtonWidth, y, removeButtonWidth, lineHeight);
+                if (GUI.Button(removeBtnRect, "−", EditorStyles.miniButton))
+                {
+                    RemoveProductAtIndex(index);
+                    return;
+                }
+
+                y += lineHeight + k_LineSpacing;
+
+                if (productData == null) return;
+
+                var so = new SerializedObject(productData);
+                so.Update();
+
+                var idProp = so.FindProperty("m_productId");
+                var typeProp = so.FindProperty("m_productType");
+                var priceProp = so.FindProperty("m_price");
+                var discountProp = so.FindProperty("m_discountPercent");
 
                 var halfWidth = rect.width / 2f;
-                var padding = 5f;
+                var fieldPadding = 5f;
 
-                var line1Rect = new Rect(rect.x, rect.y, rect.width, EditorGUIUtility.singleLineHeight);
-                var idRect = new Rect(line1Rect.x, line1Rect.y, halfWidth - padding, line1Rect.height);
-                var typeRect = new Rect(line1Rect.x + halfWidth, line1Rect.y, halfWidth, line1Rect.height);
+                var idRect = new Rect(rect.x, y, halfWidth - fieldPadding, lineHeight);
+                var typeRect = new Rect(rect.x + halfWidth, y, halfWidth, lineHeight);
 
                 EditorGUI.PropertyField(idRect, idProp, GUIContent.none);
                 if (string.IsNullOrEmpty(idProp.stringValue))
@@ -125,10 +236,10 @@ namespace UniPurchase.Editor
                 }
 
                 EditorGUI.PropertyField(typeRect, typeProp, GUIContent.none);
+                y += lineHeight + k_LineSpacing;
 
-                var line2Rect = new Rect(rect.x, rect.y + EditorGUIUtility.singleLineHeight + 2, rect.width, EditorGUIUtility.singleLineHeight);
-                var priceRect = new Rect(line2Rect.x, line2Rect.y, halfWidth - padding, line2Rect.height);
-                var discountRect = new Rect(line2Rect.x + halfWidth, line2Rect.y, halfWidth, line2Rect.height);
+                var priceRect = new Rect(rect.x, y, halfWidth - fieldPadding, lineHeight);
+                var discountRect = new Rect(rect.x + halfWidth, y, halfWidth, lineHeight);
 
                 var originalLabelWidth = EditorGUIUtility.labelWidth;
 
@@ -139,7 +250,161 @@ namespace UniPurchase.Editor
                 EditorGUI.PropertyField(discountRect, discountProp, new GUIContent("Discount", "0.0 = No discount, 0.5 = 50% off"));
 
                 EditorGUIUtility.labelWidth = originalLabelWidth;
+                y += lineHeight + k_LineSpacing;
+
+                if (s_validationErrors.TryGetValue(index, out var error))
+                {
+                    var errorRect = new Rect(rect.x, y, rect.width, k_ErrorBoxHeight);
+                    EditorGUI.HelpBox(errorRect, error, MessageType.Error);
+                    y += k_ErrorBoxHeight + k_LineSpacing;
+                }
+
+                if (productData.GetType() != typeof(ProductData))
+                {
+                    DrawDerivedPropertiesFoldout(rect, productData, so, y);
+                }
+
+                if (so.ApplyModifiedProperties())
+                {
+                    GUI.changed = true;
+                }
             };
+
+            s_productList.onAddCallback = list =>
+            {
+                var prop = list.serializedProperty;
+                prop.arraySize++;
+                prop.serializedObject.ApplyModifiedProperties();
+                list.index = prop.arraySize - 1;
+            };
+
+            s_productList.onRemoveCallback = list =>
+            {
+                var element = list.serializedProperty.GetArrayElementAtIndex(list.index);
+                if (element.objectReferenceValue != null)
+                    element.objectReferenceValue = null;
+                list.serializedProperty.DeleteArrayElementAtIndex(list.index);
+                list.serializedProperty.serializedObject.ApplyModifiedProperties();
+            };
+        }
+
+        private static void HandleHeaderDragAndDrop(Rect rect)
+        {
+            var evt = Event.current;
+
+            switch (evt.type)
+            {
+                case EventType.DragUpdated when rect.Contains(evt.mousePosition):
+                {
+                    if (HasValidProductDrag())
+                    {
+                        DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+                        s_headerDragHighlight = true;
+                        evt.Use();
+                    }
+
+                    break;
+                }
+                case EventType.DragPerform when rect.Contains(evt.mousePosition):
+                {
+                    DragAndDrop.AcceptDrag();
+                    var prop = s_productList.serializedProperty;
+                    var so = prop.serializedObject;
+
+                    foreach (var obj in DragAndDrop.objectReferences)
+                    {
+                        if (!(obj is ProductData product)) continue;
+                        if (IsProductInList(prop, product)) continue;
+
+                        prop.arraySize++;
+                        so.ApplyModifiedProperties();
+                        prop.GetArrayElementAtIndex(prop.arraySize - 1).objectReferenceValue = product;
+                        so.ApplyModifiedProperties();
+                    }
+
+                    s_headerDragHighlight = false;
+                    evt.Use();
+                    break;
+                }
+                case EventType.DragExited:
+                    s_headerDragHighlight = false;
+                    break;
+                case EventType.Repaint when s_headerDragHighlight:
+                    EditorGUI.DrawRect(rect, new Color(0.3f, 0.7f, 1f, 0.2f));
+                    break;
+            }
+        }
+
+        private static bool HasValidProductDrag()
+        {
+            if (DragAndDrop.objectReferences == null) return false;
+            foreach (var obj in DragAndDrop.objectReferences)
+            {
+                if (obj is ProductData) return true;
+            }
+
+            return false;
+        }
+
+        private static void RemoveProductAtIndex(int index)
+        {
+            var prop = s_productList.serializedProperty;
+            var element = prop.GetArrayElementAtIndex(index);
+            if (element.objectReferenceValue != null)
+                element.objectReferenceValue = null;
+            prop.DeleteArrayElementAtIndex(index);
+            prop.serializedObject.ApplyModifiedProperties();
+            GUI.changed = true;
+        }
+
+        private static bool IsProductInList(SerializedProperty listProp, Object product)
+        {
+            for (int i = 0; i < listProp.arraySize; i++)
+            {
+                if (listProp.GetArrayElementAtIndex(i).objectReferenceValue == product)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void DrawDerivedPropertiesFoldout(Rect rect, ProductData productData, SerializedObject so, float startY)
+        {
+            int instanceId = productData.GetInstanceID();
+            s_foldoutStates.TryGetValue(instanceId, out var isOpen);
+
+            var foldoutRect = new Rect(rect.x, startY, rect.width, EditorGUIUtility.singleLineHeight);
+            var newOpen = EditorGUI.Foldout(foldoutRect, isOpen, $"Extended Data ({productData.GetType().Name})", true);
+            s_foldoutStates[instanceId] = newOpen;
+
+            if (!newOpen) return;
+
+            float y = startY + EditorGUIUtility.singleLineHeight + k_LineSpacing;
+            var iterator = so.GetIterator();
+            iterator.NextVisible(true);
+            while (iterator.NextVisible(false))
+            {
+                if (s_basePropertyNames.Contains(iterator.name)) continue;
+
+                var propRect = new Rect(rect.x + 15f, y, rect.width - 15f, EditorGUIUtility.singleLineHeight);
+                EditorGUI.PropertyField(propRect, iterator, true);
+                y += EditorGUIUtility.singleLineHeight + k_LineSpacing;
+            }
+        }
+
+        private static int CountDerivedProperties(ProductData productData)
+        {
+            var so = new SerializedObject(productData);
+            int count = 0;
+            var iter = so.GetIterator();
+            iter.NextVisible(true);
+            while (iter.NextVisible(false))
+            {
+                if (!s_basePropertyNames.Contains(iter.name))
+                    count++;
+            }
+
+            return count;
         }
 
         public static bool DrawMasterToggle(SerializedProperty enableProp)

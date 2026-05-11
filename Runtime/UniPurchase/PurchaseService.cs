@@ -40,6 +40,11 @@ namespace UniPurchase
         {
         }
 
+        public T GetProductData<T>(string productId) where T : ProductData
+        {
+            return Instance.GetProductData<T>(productId);
+        }
+
         public static (string originalPrice, string discountedPrice, bool hasDiscount) GetPriceInfo(string productId)
         {
             var inst = Instance;
@@ -130,7 +135,6 @@ namespace UniPurchase
                 s_lifecycleTracker.hideFlags = HideFlags.HideInInspector;
             }
 
-            inst._config.InitializeCache();
             inst._validator = new PurchaseValidator(appleTangleData, googleTangleData);
             inst._storeController = UnityIAPServices.StoreController();
 

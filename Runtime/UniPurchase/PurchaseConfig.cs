@@ -1,51 +1,15 @@
 #if ENABLE_UNI_PURCHASE
-using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Purchasing;
 
 namespace UniPurchase
 {
-    [Serializable]
-    public class ProductData
-    {
-        [SerializeField] private string m_productId;
-        [SerializeField] private ProductType m_productType;
-        [SerializeField, Range(0, 1)] private float m_discountPercent;
-        [SerializeField] private float m_price;
-        
-        public string ProductId => m_productId;
-        public ProductType ProductType => m_productType;
-        public float DiscountPercent => m_discountPercent;
-        public float Price => m_price;
-        
-        public ProductData WithProductId(string id)
-        {
-            m_productId = id;
-            return this;
-        }
-
-        public ProductData WithProductType(ProductType type)
-        {
-            m_productType = type;
-            return this;
-        }
-        
-        public ProductData WithPrice(float price)
-        {
-            m_price = price;
-            return this;
-        }
-    }
-
     public sealed class PurchaseConfig : ScriptableObject
     {
         public const string k_FileName = "UniPurcase_PurchaseConfigs_Runtime";
 
         [SerializeField] private List<ProductData> m_products = new List<ProductData>();
         [SerializeField] private bool m_isEnabled;
-
-        private Dictionary<string, ProductData> _productDict;
 
         public IReadOnlyList<ProductData> Products => m_products;
         public bool IsEnabled => m_isEnabled;
@@ -56,22 +20,21 @@ namespace UniPurchase
             m_products = products;
         }
 
-        public void InitializeCache()
-        {
-            if (_productDict != null) return;
-
-            _productDict = new Dictionary<string, ProductData>();
-            foreach (var product in m_products)
-            {
-                _productDict[product.ProductId] = product;
-            }
-        }
-
         public ProductData GetProductData(string productId)
         {
             if (string.IsNullOrEmpty(productId)) return null;
-            if (_productDict == null) InitializeCache();
-            return _productDict.GetValueOrDefault(productId);
+            foreach (var product in m_products)
+            {
+                if (product != null && product.ProductId == productId)
+                    return product;
+            }
+
+            return null;
+        }
+
+        public T GetProductData<T>(string productId) where T : ProductData
+        {
+            return GetProductData(productId) as T;
         }
     }
 }

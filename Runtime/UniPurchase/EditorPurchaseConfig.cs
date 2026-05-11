@@ -22,7 +22,7 @@ namespace UniPurchase
 
             if (editorConfig == null)
             {
-                Debug.LogWarning("[UniAudio] AudioEditorSettings is empty.");
+                Debug.LogWarning("[UniPurchase] EditorPurchaseConfig is empty.");
                 return null;
             }
 

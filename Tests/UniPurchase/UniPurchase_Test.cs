@@ -29,13 +29,11 @@ namespace UniPurchase.Tests
             instanceField?.SetValue(null, null);
 
             _testConfig = ScriptableObject.CreateInstance<PurchaseConfig>();
-            var mockProduct = new ProductData()
-                .WithProductId(k_testProductId)
+            var mockProduct = ScriptableObject.CreateInstance<ProductData>();
+            mockProduct.WithProductId(k_testProductId)
                 .WithProductType(UnityEngine.Purchasing.ProductType.Consumable);
             
             _testConfig.SetUp(true, new System.Collections.Generic.List<ProductData> { mockProduct });
-            _testConfig.InitializeCache();
-
             _mockRewardHandler = new MockRewardHandler();
             _mockRewardHandler.Initialize();
         }
