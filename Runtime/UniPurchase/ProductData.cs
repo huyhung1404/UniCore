@@ -10,6 +10,8 @@ namespace UniPurchase
         public string DiscountedPrice { get; }
         public bool HasDiscount { get; }
 
+        public string Price => HasDiscount ? DiscountedPrice : OriginalPrice;
+
         internal ProductPriceInfo(string originalPrice, string discountedPrice, bool hasDiscount)
         {
             OriginalPrice = originalPrice;
@@ -17,7 +19,7 @@ namespace UniPurchase
             HasDiscount = hasDiscount;
         }
     }
-    
+
     public class ProductData : ScriptableObject
     {
         [SerializeField] private string m_productId;

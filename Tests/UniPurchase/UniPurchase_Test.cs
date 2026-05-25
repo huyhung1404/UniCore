@@ -126,7 +126,7 @@ namespace UniPurchase.Tests
         [UnityTest]
         public IEnumerator PurchaseFlow_Success_Should_Give_Reward_And_Save()
         {
-            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId);
+            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId,null);
             yield return null;
 
             Assert.IsTrue(_mockRewardHandler.IsRewardGiven, "Reward should be given.");
@@ -138,7 +138,7 @@ namespace UniPurchase.Tests
         public IEnumerator PurchaseFlow_Duplicate_Should_Be_Blocked_By_Idempotency()
         {
             LocalTransactionTracker.MarkTransactionAsProcessed(k_testTransactionId);
-            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId);
+            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId,null);
             yield return null;
 
             Assert.IsFalse(_mockRewardHandler.IsRewardGiven, "Duplicate reward blocked.");
@@ -175,7 +175,7 @@ namespace UniPurchase.Tests
             typeof(PurchaseService).GetField("_isInitialized", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(serviceInstance, true);
 
             var isSuccessEventFired = false;
-            PurchaseEventDispatcher.OnPurchaseSuccess += (pid, tid) => isSuccessEventFired = true;
+            PurchaseEventDispatcher.OnPurchaseSuccess += (pid, tid,_) => isSuccessEventFired = true;
 
             var fakePendingOrder = ForgeFakePendingOrder(k_testProductId, k_testTransactionId);
 
