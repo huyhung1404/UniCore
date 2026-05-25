@@ -509,7 +509,7 @@ namespace UniPurchase
             }
 
             _unconfirmedOrders[transactionId] = pendingOrder;
-            PurchaseEventDispatcher.DispatchPurchaseSuccess(productId, transactionId);
+            PurchaseEventDispatcher.DispatchPurchaseSuccess(productId, transactionId, pendingOrder);
             EndTransactionFlow();
         }
 

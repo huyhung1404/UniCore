@@ -1,6 +1,7 @@
 #if ENABLE_UNI_PURCHASE
 using System;
 using UnityEngine;
+using UnityEngine.Purchasing;
 
 namespace UniPurchase
 {
@@ -13,7 +14,7 @@ namespace UniPurchase
         public static event Action OnTransactionEnd;
         public static event Action OnTransactionDeferred;
 
-        public static event Action<string, string> OnPurchaseSuccess;
+        public static event Action<string, string, PendingOrder> OnPurchaseSuccess;
         public static event Action<string, string> OnPurchaseFailed;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -35,7 +36,7 @@ namespace UniPurchase
         public static void DispatchTransactionEnd() => OnTransactionEnd?.Invoke();
         public static void DispatchTransactionDeferred() => OnTransactionDeferred?.Invoke();
 
-        public static void DispatchPurchaseSuccess(string productId, string transactionId) => OnPurchaseSuccess?.Invoke(productId, transactionId);
+        public static void DispatchPurchaseSuccess(string productId, string transactionId, PendingOrder pendingOrder) => OnPurchaseSuccess?.Invoke(productId, transactionId, pendingOrder);
         public static void DispatchPurchaseFailed(string productId, string reason) => OnPurchaseFailed?.Invoke(productId, reason);
     }
 }
