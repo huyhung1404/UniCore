@@ -2,15 +2,41 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Purchasing;
+#if HAS_UNITASK
+using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
+#endif
 #if HAS_ADDRESSABLES
 using UnityEngine.AddressableAssets;
 #endif
 
 namespace UniPurchase
 {
+    public readonly struct PurchaseResult
+    {
+        public bool IsSuccess { get; }
+        public string ProductId { get; }
+        public string TransactionId { get; }
+        public string FailureReason { get; }
+
+        internal PurchaseResult(bool isSuccess, string productId, string transactionId, string failureReason)
+        {
+            IsSuccess = isSuccess;
+            ProductId = productId;
+            TransactionId = transactionId;
+            FailureReason = failureReason;
+        }
+
+        public static PurchaseResult Success(string productId, string transactionId) =>
+            new PurchaseResult(true, productId, transactionId, null);
+
+        public static PurchaseResult Failure(string productId, string reason) =>
+            new PurchaseResult(false, productId, null, reason);
+    }
+
     public sealed class PurchaseService
     {
         private static PurchaseService s_instance;
@@ -28,6 +54,11 @@ namespace UniPurchase
         private int _activeTransactions;
 
         private readonly Dictionary<string, PendingOrder> _unconfirmedOrders = new Dictionary<string, PendingOrder>();
+#if HAS_UNITASK
+        private readonly Dictionary<string, UniTaskCompletionSource<PurchaseResult>> _purchaseCompletions = new Dictionary<string, UniTaskCompletionSource<PurchaseResult>>();
+#else
+        private readonly Dictionary<string, TaskCompletionSource<PurchaseResult>> _purchaseCompletions = new Dictionary<string, TaskCompletionSource<PurchaseResult>>();
+#endif
 
         private static PurchaseLifecycleTracker s_lifecycleTracker;
 
@@ -94,7 +125,11 @@ namespace UniPurchase
             return new ProductPriceInfo(originalString, discountedString, true);
         }
 
+#if HAS_UNITASK
+        public static async UniTask InitializeAsync(MonoBehaviour lifecycleHost, byte[] appleTangleData, byte[] googleTangleData)
+#else
         public static async Task InitializeAsync(MonoBehaviour lifecycleHost, byte[] appleTangleData, byte[] googleTangleData)
+#endif
         {
             if (lifecycleHost == null)
             {
@@ -196,14 +231,19 @@ namespace UniPurchase
             }
         }
 
-        public static async Task BuyProduct(string productId)
+#if HAS_UNITASK
+        public static async UniTask<PurchaseResult> BuyProduct(string productId)
+#else
+        public static async Task<PurchaseResult> BuyProduct(string productId)
+#endif
         {
-            if (string.IsNullOrEmpty(productId)) return;
+            if (string.IsNullOrEmpty(productId))
+                return PurchaseResult.Failure(productId, "Product ID is null or empty.");
 
             if (IsProcessing)
             {
                 Debug.LogWarning("[UniPurchase] A transaction is already in progress.");
-                return;
+                return PurchaseResult.Failure(productId, "A transaction is already in progress.");
             }
 
             var inst = Instance;
@@ -217,8 +257,9 @@ namespace UniPurchase
 
                 if (!inst._isInitialized)
                 {
-                    PurchaseEventDispatcher.DispatchPurchaseFailed(productId, "Store is not initialized. Please check network connection.");
-                    return;
+                    var error = "Store is not initialized. Please check network connection.";
+                    PurchaseEventDispatcher.DispatchPurchaseFailed(productId, error);
+                    return PurchaseResult.Failure(productId, error);
                 }
             }
 
@@ -228,14 +269,27 @@ namespace UniPurchase
                 var error = $"Product ID {productId} not found in Store.";
                 Debug.LogError($"[UniPurchase] {error}");
                 PurchaseEventDispatcher.DispatchPurchaseFailed(productId, error);
-                return;
+                return PurchaseResult.Failure(productId, error);
             }
+
+#if HAS_UNITASK
+            var tcs = new UniTaskCompletionSource<PurchaseResult>();
+#else
+            var tcs = new TaskCompletionSource<PurchaseResult>();
+#endif
+            inst._purchaseCompletions[productId] = tcs;
 
             inst.BeginTransactionFlow();
             inst._storeController.PurchaseProduct(targetProduct);
+
+            return await tcs.Task;
         }
 
+#if HAS_UNITASK
+        public static async UniTask RestorePurchases()
+#else
         public static async Task RestorePurchases()
+#endif
         {
             if (IsProcessing) return;
 
@@ -268,10 +322,34 @@ namespace UniPurchase
                 inst._storeController?.ConfirmPurchase(pendingOrder);
                 inst._unconfirmedOrders.Remove(transactionId);
                 Debug.Log($"[UniPurchase] Transaction {transactionId} permanently confirmed.");
+
+                var firstItem = pendingOrder.CartOrdered.Items().FirstOrDefault();
+                var productId = firstItem != null ? firstItem.Product.definition.id : null;
+                inst.CompletePurchase(PurchaseResult.Success(productId, transactionId));
             }
         }
 
+        public static void RejectTransaction(string transactionId, string reason)
+        {
+            if (string.IsNullOrEmpty(transactionId)) return;
+            var inst = Instance;
+            if (inst._unconfirmedOrders.TryGetValue(transactionId, out var pendingOrder))
+            {
+                inst._unconfirmedOrders.Remove(transactionId);
+
+                var firstItem = pendingOrder.CartOrdered.Items().FirstOrDefault();
+                var productId = firstItem != null ? firstItem.Product.definition.id : null;
+                Debug.LogWarning($"[UniPurchase] Transaction {transactionId} rejected: {reason}");
+                PurchaseEventDispatcher.DispatchPurchaseFailed(productId, reason);
+                inst.CompletePurchase(PurchaseResult.Failure(productId, reason));
+            }
+        }
+
+#if HAS_UNITASK
+        public static async UniTask<bool> CheckIsSubscriptionActiveAsync(string productId)
+#else
         public static async Task<bool> CheckIsSubscriptionActiveAsync(string productId)
+#endif
         {
             var inst = Instance;
             if (!inst._isInitialized || inst._subscriptionHelper == null) return false;
@@ -329,6 +407,11 @@ namespace UniPurchase
             inst._isInitializing = false;
             inst._activeTransactions = 0;
             inst._unconfirmedOrders.Clear();
+
+            foreach (var kvp in inst._purchaseCompletions)
+                kvp.Value.TrySetResult(PurchaseResult.Failure(kvp.Key, "Service disposed"));
+            inst._purchaseCompletions.Clear();
+
             inst._storeController = null;
             inst._validator = null;
             inst._subscriptionHelper = null;
@@ -344,11 +427,19 @@ namespace UniPurchase
             s_instance = null;
         }
 
+#if HAS_UNITASK
+        private async UniTask HandleNativeStoreResumeAsync()
+#else
         private async Task HandleNativeStoreResumeAsync()
+#endif
         {
             try
             {
+#if HAS_UNITASK
+                await UniTask.Delay(TimeSpan.FromSeconds(3));
+#else
                 await Task.Delay(TimeSpan.FromSeconds(3));
+#endif
                 if (IsProcessing)
                 {
                     Debug.LogWarning("[UniPurchase] OS returned but no callback fired. Silently unblocking UI.");
@@ -359,6 +450,15 @@ namespace UniPurchase
             catch (Exception ex)
             {
                 Debug.LogWarning($"[UniPurchase] Native Resume handler interrupted: {ex.Message}");
+            }
+        }
+
+        private void CompletePurchase(PurchaseResult result)
+        {
+            if (result.ProductId != null && _purchaseCompletions.TryGetValue(result.ProductId, out var tcs))
+            {
+                _purchaseCompletions.Remove(result.ProductId);
+                tcs.TrySetResult(result);
             }
         }
 
@@ -403,6 +503,7 @@ namespace UniPurchase
             {
                 var error = "Invalid Receipt Validation";
                 PurchaseEventDispatcher.DispatchPurchaseFailed(productId, error);
+                CompletePurchase(PurchaseResult.Failure(productId, error));
                 EndTransactionFlow();
                 return;
             }
@@ -426,6 +527,7 @@ namespace UniPurchase
             var productId = firstItem != null ? firstItem.Product.definition.id : "Unknown";
             var reason = string.IsNullOrEmpty(failedOrder.Details) ? failedOrder.FailureReason.ToString() : failedOrder.Details;
             PurchaseEventDispatcher.DispatchPurchaseFailed(productId, reason);
+            CompletePurchase(PurchaseResult.Failure(productId, reason));
             EndTransactionFlow();
         }
 

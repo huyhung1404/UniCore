@@ -27,10 +27,18 @@ namespace UniPurchase
             }
 
             var isRewardSuccess = ProcessProjectSpecificRewards(productId);
-            if (!isRewardSuccess) return; 
+            if (!isRewardSuccess)
+            {
+                PurchaseService.RejectTransaction(transactionId, "Reward processing failed");
+                return;
+            }
 
             var isSaveSuccess = SaveTransactionAndGameData(transactionId);
-            if (!isSaveSuccess) return; 
+            if (!isSaveSuccess)
+            {
+                PurchaseService.RejectTransaction(transactionId, "Save failed");
+                return;
+            }
 
             PurchaseService.ConfirmTransaction(transactionId);
         }

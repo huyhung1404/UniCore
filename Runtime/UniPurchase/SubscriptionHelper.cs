@@ -1,9 +1,13 @@
 #if ENABLE_UNI_PURCHASE
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Purchasing;
+#if HAS_UNITASK
+using Cysharp.Threading.Tasks;
+#else
+using System.Threading.Tasks;
+#endif
 
 namespace UniPurchase
 {
@@ -16,7 +20,11 @@ namespace UniPurchase
             _storeController = controller;
         }
 
+#if HAS_UNITASK
+        public async UniTask<TimeSpan> GetSubscriptionTimeRemainingAsync(string productId)
+#else
         public async Task<TimeSpan> GetSubscriptionTimeRemainingAsync(string productId)
+#endif
         {
             if (_storeController == null || string.IsNullOrEmpty(productId)) 
                 return TimeSpan.Zero;
@@ -25,7 +33,11 @@ namespace UniPurchase
             if (product == null || product.definition.type != ProductType.Subscription) 
                 return TimeSpan.Zero;
 
+#if HAS_UNITASK
+            var tcs = new UniTaskCompletionSource<TimeSpan>();
+#else
             var tcs = new TaskCompletionSource<TimeSpan>();
+#endif
 
             Action<Entitlement> onCheckEntitlement = null;
             onCheckEntitlement = (entitlement) =>
@@ -72,6 +84,16 @@ namespace UniPurchase
             _storeController.OnCheckEntitlement += onCheckEntitlement;
             _storeController.CheckEntitlement(product);
 
+#if HAS_UNITASK
+            var (hasResult, result) = await UniTask.WhenAny(tcs.Task, UniTask.Delay(TimeSpan.FromSeconds(5)));
+            if (!hasResult)
+            {
+                _storeController.OnCheckEntitlement -= onCheckEntitlement;
+                Debug.LogWarning($"[UniPurchase] Subscription check timed out for {productId}.");
+                return TimeSpan.Zero;
+            }
+            return result;
+#else
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
             var completedTask = await Task.WhenAny(tcs.Task, timeoutTask);
 
@@ -83,9 +105,14 @@ namespace UniPurchase
             }
 
             return await tcs.Task;
+#endif
         }
         
+#if HAS_UNITASK
+        public async UniTask<bool> IsSubscriptionActiveAsync(string productId)
+#else
         public async Task<bool> IsSubscriptionActiveAsync(string productId)
+#endif
         {
             var remainingTime = await GetSubscriptionTimeRemainingAsync(productId);
             return remainingTime.TotalSeconds > 0;
