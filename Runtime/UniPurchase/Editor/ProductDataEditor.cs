@@ -14,7 +14,7 @@ namespace UniPurchase.Editor
             "m_productId", "m_productType", "m_discountPercent", "m_price"
         };
 
-        private bool _derivedFoldout;
+        private bool _derivedFoldout = true;
 
         public override void OnInspectorGUI()
         {

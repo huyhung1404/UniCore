@@ -233,7 +233,7 @@ namespace UniPurchase.Editor
             s_productList.drawHeaderCallback = rect =>
             {
                 HandleHeaderDragAndDrop(rect);
-                EditorGUI.LabelField(new Rect(rect.x + 15, rect.y, rect.width, rect.height), "Product List");
+                EditorGUI.LabelField(new Rect(rect.x + 15, rect.y, rect.width, rect.height), $"Product List ({productsProp.arraySize})");
             };
 
             s_productList.elementHeightCallback = index =>
