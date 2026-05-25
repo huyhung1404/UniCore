@@ -154,8 +154,11 @@ namespace UniPurchase
 
             if (s_lifecycleTracker == null)
             {
-                s_lifecycleTracker = lifecycleHost.gameObject.AddComponent<PurchaseLifecycleTracker>();
-                s_lifecycleTracker.hideFlags = HideFlags.HideInInspector;
+                s_lifecycleTracker = lifecycleHost.gameObject.GetComponent<PurchaseLifecycleTracker>();
+                if (s_lifecycleTracker == null)
+                {
+                    s_lifecycleTracker = lifecycleHost.gameObject.AddComponent<PurchaseLifecycleTracker>();
+                }
             }
 
             inst._validator = new PurchaseValidator(appleTangleData, googleTangleData);
