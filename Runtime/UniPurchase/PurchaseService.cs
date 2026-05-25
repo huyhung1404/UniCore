@@ -40,9 +40,9 @@ namespace UniPurchase
         {
         }
 
-        public T GetProductData<T>(string productId) where T : ProductData
+        public static T GetProductData<T>(string productId) where T : ProductData
         {
-            return Instance.GetProductData<T>(productId);
+            return Instance._config?.GetProductData<T>(productId);
         }
 
         public static (string originalPrice, string discountedPrice, bool hasDiscount) GetPriceInfo(string productId)
@@ -124,8 +124,10 @@ namespace UniPurchase
 
             if (!inst._config.IsEnabled)
             {
-                Debug.Log("[UniPurchase] Purchase System is disabled in settings.");
+                var error = "Purchase System is disabled in settings.";
+                Debug.Log($"[UniPurchase] {error}");
                 inst._isInitializing = false;
+                PurchaseEventDispatcher.DispatchInitializeFailed(error);
                 return;
             }
 
@@ -273,18 +275,44 @@ namespace UniPurchase
 #endif
         }
 
+        internal static void OnLifecycleTrackerDestroyed(PurchaseLifecycleTracker tracker)
+        {
+            if (s_lifecycleTracker == tracker) Dispose();
+        }
+
         public static void Dispose()
         {
             var inst = s_instance;
-            if (inst == null || inst._storeController == null) return;
+            if (inst == null) return;
 
-            inst._storeController.OnProductsFetched -= inst.HandleProductsFetched;
-            inst._storeController.OnProductsFetchFailed -= inst.HandleProductsFetchFailed;
-            inst._storeController.OnPurchasePending -= inst.HandlePurchasePending;
-            inst._storeController.OnPurchaseDeferred -= inst.HandlePurchaseDeferred;
-            inst._storeController.OnPurchaseFailed -= inst.HandlePurchaseFailed;
-            inst._storeController.OnPurchasesFetched -= inst.HandlePurchasesFetched;
-            inst._storeController.OnPurchasesFetchFailed -= inst.HandlePurchasesFetchFailed;
+            if (inst._storeController != null)
+            {
+                inst._storeController.OnProductsFetched -= inst.HandleProductsFetched;
+                inst._storeController.OnProductsFetchFailed -= inst.HandleProductsFetchFailed;
+                inst._storeController.OnPurchasePending -= inst.HandlePurchasePending;
+                inst._storeController.OnPurchaseDeferred -= inst.HandlePurchaseDeferred;
+                inst._storeController.OnPurchaseFailed -= inst.HandlePurchaseFailed;
+                inst._storeController.OnPurchasesFetched -= inst.HandlePurchasesFetched;
+                inst._storeController.OnPurchasesFetchFailed -= inst.HandlePurchasesFetchFailed;
+            }
+
+            inst._isInitialized = false;
+            inst._isInitializing = false;
+            inst._activeTransactions = 0;
+            inst._unconfirmedOrders.Clear();
+            inst._storeController = null;
+            inst._validator = null;
+            inst._subscriptionHelper = null;
+            inst._config = null;
+            inst._hasCachedDependencies = false;
+
+            if (s_lifecycleTracker != null)
+            {
+                UnityEngine.Object.Destroy(s_lifecycleTracker);
+                s_lifecycleTracker = null;
+            }
+
+            s_instance = null;
         }
 
         private async Task HandleNativeStoreResumeAsync()
@@ -357,12 +385,14 @@ namespace UniPurchase
 
         private void HandlePurchaseDeferred(DeferredOrder deferredOrder)
         {
+            if (!IsProcessing) BeginTransactionFlow();
             PurchaseEventDispatcher.DispatchTransactionDeferred();
             EndTransactionFlow();
         }
 
         private void HandlePurchaseFailed(FailedOrder failedOrder)
         {
+            if (!IsProcessing) BeginTransactionFlow();
             var firstItem = failedOrder.CartOrdered.Items().FirstOrDefault();
             var productId = firstItem != null ? firstItem.Product.definition.id : "Unknown";
             var reason = string.IsNullOrEmpty(failedOrder.Details) ? failedOrder.FailureReason.ToString() : failedOrder.Details;
@@ -384,7 +414,7 @@ namespace UniPurchase
             }
 
             Debug.Log($"[UniPurchase] Restore processing {pendingOrders.Count} orders.");
-            _activeTransactions++;
+            _activeTransactions += pendingOrders.Count;
             foreach (var pendingOrder in pendingOrders)
             {
                 HandlePurchasePending(pendingOrder);
@@ -395,15 +425,15 @@ namespace UniPurchase
 
         private void HandlePurchasesFetchFailed(PurchasesFetchFailureDescription failureDescription)
         {
+            var reason = string.IsNullOrEmpty(failureDescription.Message) ? failureDescription.FailureReason.ToString() : failureDescription.Message;
+            Debug.LogError($"[UniPurchase] Restore failed: {reason}");
+            PurchaseEventDispatcher.DispatchPurchaseFailed("RESTORE", reason);
+
             if (IsProcessing)
             {
                 _activeTransactions = 0;
                 PurchaseEventDispatcher.DispatchTransactionEnd();
             }
-
-            var reason = string.IsNullOrEmpty(failureDescription.Message) ? failureDescription.FailureReason.ToString() : failureDescription.Message;
-            Debug.LogError($"[UniPurchase] Restore failed: {reason}");
-            PurchaseEventDispatcher.DispatchPurchaseFailed("RESTORE", reason);
         }
     }
 
@@ -411,6 +441,7 @@ namespace UniPurchase
     {
         private void OnApplicationPause(bool isPaused) => PurchaseService.OnApplicationPause(isPaused);
         private void OnApplicationFocus(bool hasFocus) => PurchaseService.OnApplicationFocus(hasFocus);
+        private void OnDestroy() => PurchaseService.OnLifecycleTrackerDestroyed(this);
     }
 }
 #endif

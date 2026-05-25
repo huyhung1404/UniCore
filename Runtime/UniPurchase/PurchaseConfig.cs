@@ -6,7 +6,7 @@ namespace UniPurchase
 {
     public sealed class PurchaseConfig : ScriptableObject
     {
-        public const string k_FileName = "UniPurcase_PurchaseConfigs_Runtime";
+        public const string k_FileName = "UniPurchase_PurchaseConfigs_Runtime";
 
         [SerializeField] private List<ProductData> m_products = new List<ProductData>();
         [SerializeField] private bool m_isEnabled;
