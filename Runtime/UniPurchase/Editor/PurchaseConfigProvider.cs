@@ -70,6 +70,8 @@ namespace UniPurchase.Editor
             var isSystemEnabled = DrawMasterToggle(enableProp);
             if (!isSystemEnabled) return;
 
+            DrawConfigModeSection(serializedObject);
+
             using (new EditorGUILayout.HorizontalScope())
             {
                 var icon = EditorGUIUtility.IconContent("d_FilterByLabel") ?? EditorGUIUtility.IconContent("SettingsIcon");
@@ -94,6 +96,95 @@ namespace UniPurchase.Editor
             }
 
             s_productList?.DoLayoutList();
+        }
+
+        private static void DrawConfigModeSection(SerializedObject serializedObject)
+        {
+            var modeProp = serializedObject.FindProperty("m_configMode");
+            var mode = (PurchaseConfigMode)modeProp.enumValueIndex;
+
+            var boxStyle = new GUIStyle("helpbox")
+            {
+                padding = new RectOffset(10, 10, 8, 8)
+            };
+
+            EditorGUILayout.BeginVertical(boxStyle);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                var icon = EditorGUIUtility.IconContent("d_Settings") ?? EditorGUIUtility.IconContent("SettingsIcon");
+                if (icon != null && icon.image != null)
+                    GUILayout.Label(icon, GUILayout.Width(18), GUILayout.Height(18));
+
+                GUILayout.Label("Loading Mode", new GUIStyle(EditorStyles.boldLabel)
+                {
+                    alignment = TextAnchor.MiddleLeft
+                });
+            }
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.PropertyField(modeProp, GUIContent.none);
+
+            switch (mode)
+            {
+                case PurchaseConfigMode.Resources:
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.LabelField("Config will be placed in Resources on build and loaded via Resources.Load.", EditorStyles.miniLabel);
+                    break;
+
+                case PurchaseConfigMode.Addressable:
+#if !HAS_ADDRESSABLES
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.HelpBox(
+                        "Addressable package (com.unity.addressables) is required for this mode.\nPlease install it via Package Manager.",
+                        MessageType.Error);
+#else
+                    EditorGUILayout.Space(2);
+                    EditorGUILayout.LabelField("Config will be added to the default Addressable group on build.", EditorStyles.miniLabel);
+#endif
+                    break;
+
+                case PurchaseConfigMode.Instance:
+                    EditorGUILayout.Space(4);
+                    var instanceProp = serializedObject.FindProperty("m_instanceConfig");
+                    EditorGUILayout.PropertyField(instanceProp, new GUIContent("Target Instance"));
+
+                    if (instanceProp.objectReferenceValue == null)
+                    {
+                        EditorGUILayout.HelpBox(
+                            "A PurchaseConfig instance is required!",
+                            MessageType.Error);
+                        EditorGUILayout.Space(4);
+
+                        if (GUILayout.Button("Create PurchaseConfig Asset", GUILayout.Height(24)))
+                        {
+                            var folder = EditorUtility.SaveFolderPanel("Select folder for PurchaseConfig", "Assets", "");
+                            if (!string.IsNullOrEmpty(folder))
+                            {
+                                var dataPath = Application.dataPath;
+                                if (!folder.StartsWith(dataPath))
+                                {
+                                    Debug.LogError("[UniPurchase] Selected folder must be inside the Assets directory.");
+                                }
+                                else
+                                {
+                                    var relativePath = "Assets" + folder.Substring(dataPath.Length);
+                                    var assetPath = $"{relativePath}/PurchaseConfig.asset";
+                                    var newInstance = ScriptableObject.CreateInstance<PurchaseConfig>();
+                                    AssetDatabase.CreateAsset(newInstance, assetPath);
+                                    AssetDatabase.SaveAssets();
+                                    instanceProp.objectReferenceValue = newInstance;
+                                    serializedObject.ApplyModifiedProperties();
+                                }
+                            }
+                        }
+                    }
+
+                    break;
+            }
+
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space(8);
         }
 
         private static Dictionary<int, string> ValidateProducts(SerializedProperty productsProp)

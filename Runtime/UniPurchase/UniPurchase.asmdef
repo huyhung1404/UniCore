@@ -13,7 +13,9 @@
         "Unity.Purchasing.AppleMacos",
         "Unity.Purchasing.AppleMacosStub",
         "Unity.Purchasing.AppleStub",
-        "Unity.Purchasing.SecurityStub"
+        "Unity.Purchasing.SecurityStub",
+        "Unity.Addressables",
+        "Unity.ResourceManager"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -27,6 +29,11 @@
             "name": "com.unity.purchasing",
             "expression": "5.0.0",
             "define": "ENABLE_UNI_PURCHASE"
+        },
+        {
+            "name": "com.unity.addressables",
+            "expression": "2.0.0",
+            "define": "HAS_ADDRESSABLES"
         }
     ],
     "noEngineReferences": false

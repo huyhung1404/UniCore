@@ -5,6 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Purchasing;
+#if HAS_ADDRESSABLES
+using UnityEngine.AddressableAssets;
+#endif
 
 namespace UniPurchase
 {
@@ -38,6 +41,11 @@ namespace UniPurchase
 
         private PurchaseService()
         {
+        }
+
+        public static void SetConfig(PurchaseConfig config)
+        {
+            Instance._config = config;
         }
 
         public static T GetProductData<T>(string productId) where T : ProductData
@@ -110,9 +118,22 @@ namespace UniPurchase
             inst._isInitializing = true;
 
 #if UNITY_EDITOR
-            inst._config = EditorPurchaseConfig.CreateRuntimeInstance();
+            if (inst._config == null)
+            {
+                inst._config = EditorPurchaseConfig.CreateRuntimeInstance();
+            }
 #else
-            inst._config = Resources.Load<PurchaseConfig>(PurchaseConfig.k_FileName);
+            if (inst._config == null)
+            {
+                inst._config = Resources.Load<PurchaseConfig>(PurchaseConfig.k_FileName);
+            }
+#if HAS_ADDRESSABLES
+            if (inst._config == null)
+            {
+                var handle = Addressables.LoadAssetAsync<PurchaseConfig>(PurchaseConfig.k_FileName);
+                inst._config = await handle.Task;
+            }
+#endif
 #endif
 
             if (inst._config == null)
