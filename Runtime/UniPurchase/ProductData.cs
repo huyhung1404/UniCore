@@ -4,6 +4,20 @@ using UnityEngine.Purchasing;
 
 namespace UniPurchase
 {
+    public struct ProductPriceInfo
+    {
+        public string OriginalPrice { get; }
+        public string DiscountedPrice { get; }
+        public bool HasDiscount { get; }
+
+        internal ProductPriceInfo(string originalPrice, string discountedPrice, bool hasDiscount)
+        {
+            OriginalPrice = originalPrice;
+            DiscountedPrice = discountedPrice;
+            HasDiscount = hasDiscount;
+        }
+    }
+    
     public class ProductData : ScriptableObject
     {
         [SerializeField] private string m_productId;

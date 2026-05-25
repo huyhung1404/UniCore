@@ -53,10 +53,15 @@ namespace UniPurchase
             return Instance._config?.GetProductData<T>(productId);
         }
 
-        public static (string originalPrice, string discountedPrice, bool hasDiscount) GetPriceInfo(string productId)
+        public static ProductPriceInfo GetPriceInfo(ProductData productData)
+        {
+            return GetPriceInfo(productData.ProductId);
+        }
+        
+        public static ProductPriceInfo GetPriceInfo(string productId)
         {
             var inst = Instance;
-            if (string.IsNullOrEmpty(productId)) return ("$0.00", "$0.00", false);
+            if (string.IsNullOrEmpty(productId)) return new ProductPriceInfo("$0.00", "$0.00", false);
 
             var productData = inst._config?.GetProductData(productId);
             var discountPercent = productData != null ? productData.DiscountPercent : 0f;
@@ -67,26 +72,26 @@ namespace UniPurchase
             {
                 var simPrice = productData.Price;
                 var simOriginal = $"${simPrice:0.00}";
-                if (!hasDiscount) return (simOriginal, simOriginal, false);
+                if (!hasDiscount) return new ProductPriceInfo(simOriginal, simOriginal, false);
                 var simDiscounted = simPrice * (1f - discountPercent);
-                return (simOriginal, $"${simDiscounted:0.00}", true);
+                return new ProductPriceInfo(simOriginal, $"${simDiscounted:0.00}", true);
             }
 #endif
 
-            if (!inst._isInitialized || inst._storeController == null) return ("---", "---", false);
+            if (!inst._isInitialized || inst._storeController == null) return new ProductPriceInfo("---", "---", false);
 
             var targetProduct = inst._storeController.GetProducts().FirstOrDefault(p => p.definition.id == productId);
-            if (targetProduct == null) return ("---", "---", false);
+            if (targetProduct == null) return new ProductPriceInfo("---", "---", false);
 
             var originalString = targetProduct.metadata.localizedPriceString;
-            if (!hasDiscount) return (originalString, originalString, false);
+            if (!hasDiscount) return new ProductPriceInfo(originalString, originalString, false);
 
             var decimalPrice = targetProduct.metadata.localizedPrice;
             var currencyCode = targetProduct.metadata.isoCurrencyCode;
             var finalDecimalPrice = decimalPrice * (1m - (decimal)discountPercent);
 
             var discountedString = $"{finalDecimalPrice:0.##} {currencyCode}";
-            return (originalString, discountedString, true);
+            return new ProductPriceInfo(originalString, discountedString, true);
         }
 
         public static async Task InitializeAsync(MonoBehaviour lifecycleHost, byte[] appleTangleData, byte[] googleTangleData)
