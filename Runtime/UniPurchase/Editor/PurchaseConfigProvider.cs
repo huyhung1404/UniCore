@@ -166,7 +166,7 @@ namespace UniPurchase.Editor
                     height += lineHeight + k_LineSpacing;
                     int instanceId = productData.GetInstanceID();
                     if (s_foldoutStates.TryGetValue(instanceId, out var isOpen) && isOpen)
-                        height += CountDerivedProperties(productData) * (lineHeight + k_LineSpacing);
+                        height += GetDerivedPropertiesHeight(productData);
                 }
 
                 return height;
@@ -386,25 +386,26 @@ namespace UniPurchase.Editor
             {
                 if (s_basePropertyNames.Contains(iterator.name)) continue;
 
-                var propRect = new Rect(rect.x + 15f, y, rect.width - 15f, EditorGUIUtility.singleLineHeight);
+                var propertyHeight = EditorGUI.GetPropertyHeight(iterator, true);
+                var propRect = new Rect(rect.x + 15f, y, rect.width - 15f, propertyHeight);
                 EditorGUI.PropertyField(propRect, iterator, true);
-                y += EditorGUIUtility.singleLineHeight + k_LineSpacing;
+                y += propertyHeight + k_LineSpacing;
             }
         }
 
-        private static int CountDerivedProperties(ProductData productData)
+        private static float GetDerivedPropertiesHeight(ProductData productData)
         {
             var so = new SerializedObject(productData);
-            int count = 0;
+            float totalHeight = 0f;
             var iter = so.GetIterator();
             iter.NextVisible(true);
             while (iter.NextVisible(false))
             {
                 if (!s_basePropertyNames.Contains(iter.name))
-                    count++;
+                    totalHeight += EditorGUI.GetPropertyHeight(iter, true) + k_LineSpacing;
             }
 
-            return count;
+            return totalHeight;
         }
 
         public static bool DrawMasterToggle(SerializedProperty enableProp)
