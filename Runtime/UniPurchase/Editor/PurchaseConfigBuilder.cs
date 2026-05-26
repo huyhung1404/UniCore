@@ -33,7 +33,6 @@ namespace UniPurchase.Editor
                     break;
                 default:
                 case PurchaseConfigMode.Instance:
-                    SyncInstance();
                     break;
             }
         }
@@ -110,11 +109,6 @@ namespace UniPurchase.Editor
 #else
             Debug.LogError("[UniPurchase] Addressable mode is selected but com.unity.addressables package is not installed.");
 #endif
-        }
-
-        private static void SyncInstance()
-        {
-            EditorPurchaseConfig.SyncInstanceAsset();
         }
 
         private static void CleanupAddressable()

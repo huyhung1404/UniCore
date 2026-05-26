@@ -54,6 +54,10 @@ namespace UniPurchase.Editor
                     {
                         serializedObject.ApplyModifiedProperties();
                         config.SaveData();
+                        if (config.ConfigMode == PurchaseConfigMode.Instance)
+                        {
+                            EditorPurchaseConfig.SyncInstanceAsset();
+                        }
                     }
 #endif
                     EditorGUILayout.Space(20);

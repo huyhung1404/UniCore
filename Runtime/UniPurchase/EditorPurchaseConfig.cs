@@ -54,7 +54,8 @@ namespace UniPurchase
             {
                 Debug.LogError("[UniPurchase] RuntimeInstance != InstanceConfig.");
             }
-            runtimeInstance.SetUp(instance.m_isEnabled, instance.m_products);
+
+            SyncInstanceAsset();
         }
 
         internal static void SyncInstanceAsset()
@@ -62,9 +63,23 @@ namespace UniPurchase
             var editorConfig = instance;
             if (editorConfig == null || editorConfig.m_instanceConfig == null) return;
 
-            editorConfig.m_instanceConfig.SetUp(editorConfig.m_isEnabled, editorConfig.m_products);
-            EditorUtility.SetDirty(editorConfig.m_instanceConfig);
-            AssetDatabase.SaveAssetIfDirty(editorConfig.m_instanceConfig);
+            var target = editorConfig.m_instanceConfig;
+            if (target.IsEnabled == editorConfig.m_isEnabled
+                && IsProductListEqual(target.Products, editorConfig.m_products)) return;
+
+            target.SetUp(editorConfig.m_isEnabled, editorConfig.m_products);
+            EditorUtility.SetDirty(target);
+            AssetDatabase.SaveAssetIfDirty(target);
+        }
+
+        private static bool IsProductListEqual(IReadOnlyList<ProductData> a, IReadOnlyList<ProductData> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (var i = 0; i < a.Count; i++)
+            {
+                if (a[i] != b[i]) return false;
+            }
+            return true;
         }
     }
 }
