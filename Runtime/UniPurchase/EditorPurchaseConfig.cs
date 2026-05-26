@@ -48,6 +48,15 @@ namespace UniPurchase
             return runtimeInstance;
         }
 
+        internal static void SetUpConfig(PurchaseConfig runtimeInstance)
+        {
+            if (runtimeInstance != instance.m_instanceConfig)
+            {
+                Debug.LogError("[UniPurchase] RuntimeInstance != InstanceConfig.");
+            }
+            runtimeInstance.SetUp(instance.m_isEnabled, instance.m_products);
+        }
+
         internal static void SyncInstanceAsset()
         {
             var editorConfig = instance;

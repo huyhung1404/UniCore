@@ -77,6 +77,9 @@ namespace UniPurchase
         public static void SetConfig(PurchaseConfig config)
         {
             Instance._config = config;
+#if UNITY_EDITOR
+            EditorPurchaseConfig.SetUpConfig(Instance._config);
+#endif
         }
 
         public static T GetProductData<T>(string productId) where T : ProductData
@@ -88,7 +91,7 @@ namespace UniPurchase
         {
             return GetPriceInfo(productData.ProductId);
         }
-        
+
         public static ProductPriceInfo GetPriceInfo(string productId)
         {
             var inst = Instance;
