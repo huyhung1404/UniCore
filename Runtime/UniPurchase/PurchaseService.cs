@@ -480,6 +480,8 @@ namespace UniPurchase
         {
             _isInitialized = true;
             _isInitializing = false;
+            _cachedAppleTangle = null;
+            _cachedGoogleTangle = null;
             _subscriptionHelper = new SubscriptionHelper(_storeController);
             PurchaseEventDispatcher.DispatchInitializeSuccess();
         }
