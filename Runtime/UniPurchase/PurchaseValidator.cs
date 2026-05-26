@@ -1,4 +1,5 @@
 #if ENABLE_UNI_PURCHASE
+using System;
 using UnityEngine;
 using UnityEngine.Purchasing.Security;
 
@@ -9,16 +10,16 @@ namespace UniPurchase
         private CrossPlatformValidator _validator;
         private bool _isValidatingEnabled;
 
-        public PurchaseValidator(byte[] appleTangleData, byte[] googleTangleData)
+        public PurchaseValidator(Func<byte[]> appleTangleData, Func<byte[]> googleTangleData)
         {
             var isEditor = Application.isEditor;
-            if (isEditor) return; 
+            if (isEditor) return;
 
 #if !UNITY_EDITOR
             if (appleTangleData != null && googleTangleData != null)
             {
                 var appIdentifier = Application.identifier;
-                _validator = new CrossPlatformValidator(googleTangleData, appleTangleData, appIdentifier);
+                _validator = new CrossPlatformValidator(googleTangleData(), appleTangleData(), appIdentifier);
                 _isValidatingEnabled = true;
             }
             else

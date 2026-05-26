@@ -63,8 +63,8 @@ namespace UniPurchase
         private static PurchaseLifecycleTracker s_lifecycleTracker;
 
         private MonoBehaviour _cachedLifecycleHost;
-        private byte[] _cachedAppleTangle;
-        private byte[] _cachedGoogleTangle;
+        private Func<byte[]> _cachedAppleTangle;
+        private Func<byte[]> _cachedGoogleTangle;
         private bool _hasCachedDependencies;
 
         public static bool IsProcessing => Instance._activeTransactions > 0;
@@ -126,9 +126,9 @@ namespace UniPurchase
         }
 
 #if HAS_UNITASK
-        public static async UniTask InitializeAsync(MonoBehaviour lifecycleHost, byte[] appleTangleData, byte[] googleTangleData)
+        public static async UniTask InitializeAsync(MonoBehaviour lifecycleHost, Func<byte[]> googleTangleData, Func<byte[]> appleTangleData)
 #else
-        public static async Task InitializeAsync(MonoBehaviour lifecycleHost, byte[] appleTangleData, byte[] googleTangleData)
+        public static async Task InitializeAsync(MonoBehaviour lifecycleHost, Func<byte[]> googleTangleData, Func<byte[]> appleTangleData)
 #endif
         {
             if (lifecycleHost == null)
@@ -139,7 +139,7 @@ namespace UniPurchase
                 return;
             }
 
-            if (appleTangleData == null || googleTangleData == null)
+            if (googleTangleData == null || appleTangleData == null)
             {
                 var error = "Tangle Data cannot be null for Receipt Validation.";
                 Debug.LogError($"[UniPurchase] {error}");
@@ -252,7 +252,7 @@ namespace UniPurchase
                 if (inst._hasCachedDependencies)
                 {
                     Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery using cached dependencies...");
-                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedAppleTangle, inst._cachedGoogleTangle);
+                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedGoogleTangle, inst._cachedAppleTangle);
                 }
 
                 if (!inst._isInitialized)
@@ -299,7 +299,7 @@ namespace UniPurchase
                 if (inst._hasCachedDependencies)
                 {
                     Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery using cached dependencies...");
-                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedAppleTangle, inst._cachedGoogleTangle);
+                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedGoogleTangle, inst._cachedAppleTangle);
                 }
 
                 if (!inst._isInitialized)
