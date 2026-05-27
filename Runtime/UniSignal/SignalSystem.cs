@@ -10,10 +10,14 @@ namespace UniCore.Signal
         internal static ListenerList<T> s_list;
     }
 
+    internal static class SignalPoolCache<T> where T : IPoolableSignal
+    {
+        internal static Stack<T> s_pool;
+    }
+
     public static class SignalSystem
     {
         internal static readonly List<IListenerList> s_ActiveLists = new(32);
-        private static Dictionary<Type, object> s_pools;
 
 #if SIGNAL_THREAD_SAFE
         private static readonly object s_lock = new object();
@@ -133,15 +137,13 @@ namespace UniCore.Signal
             lock (s_lock)
             {
 #endif
-            var type = typeof(T);
-            s_pools ??= new Dictionary<Type, object>(16);
-            if (!s_pools.TryGetValue(type, out var poolObj))
+            var pool = SignalPoolCache<T>.s_pool;
+            if (pool == null)
             {
-                poolObj = new Stack<T>(8);
-                s_pools[type] = poolObj;
+                pool = new Stack<T>(8);
+                SignalPoolCache<T>.s_pool = pool;
             }
 
-            var pool = (Stack<T>)poolObj;
             return pool.Count > 0 ? pool.Pop() : new T();
 #if SIGNAL_THREAD_SAFE
             }
@@ -154,13 +156,15 @@ namespace UniCore.Signal
             lock (s_lock)
             {
 #endif
-            var type = typeof(T);
-            s_pools ??= new Dictionary<Type, object>(16);
-            if (s_pools.TryGetValue(type, out var poolObj))
+            var pool = SignalPoolCache<T>.s_pool;
+            if (pool == null)
             {
-                signal.OnRelease();
-                ((Stack<T>)poolObj).Push(signal);
+                pool = new Stack<T>(8);
+                SignalPoolCache<T>.s_pool = pool;
             }
+
+            signal.OnRelease();
+            pool.Push(signal);
 #if SIGNAL_THREAD_SAFE
             }
 #endif
