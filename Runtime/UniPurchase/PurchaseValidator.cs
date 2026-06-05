@@ -10,21 +10,23 @@ namespace UniPurchase
         private CrossPlatformValidator _validator;
         private bool _isValidatingEnabled;
 
-        public PurchaseValidator(Func<byte[]> appleTangleData, Func<byte[]> googleTangleData)
+        public PurchaseValidator(Func<byte[]> googleTangleData)
         {
             var isEditor = Application.isEditor;
             if (isEditor) return;
 
-#if !UNITY_EDITOR
-            if (appleTangleData != null && googleTangleData != null)
+#if UNITY_ANDROID && !UNITY_EDITOR
+            var tangleData = googleTangleData?.Invoke();
+            if (tangleData != null)
             {
                 var appIdentifier = Application.identifier;
-                _validator = new CrossPlatformValidator(googleTangleData(), appleTangleData(), appIdentifier);
+                // Only validate for Google Play locally.
+                _validator = new CrossPlatformValidator(tangleData, null, appIdentifier);
                 _isValidatingEnabled = true;
             }
             else
             {
-                Debug.LogWarning("[UniPurchase] Missing Tangle Data. Validation bypassed.");
+                Debug.LogWarning("[UniPurchase] Missing Google Tangle Data. Validation bypassed.");
                 _isValidatingEnabled = false;
             }
 #endif
@@ -35,7 +37,14 @@ namespace UniPurchase
             if (string.IsNullOrEmpty(receipt)) return false;
             
             var isEditor = Application.isEditor;
-            if (isEditor || !_isValidatingEnabled) return true; 
+            if (isEditor) return true; 
+
+#if UNITY_IOS
+            // StoreKit 2 handles local validation automatically.
+            // Client-side validation is bypassed here. Defer strict security to Server-Side Validation.
+            return true;
+#elif UNITY_ANDROID
+            if (!_isValidatingEnabled) return true;
 
             try
             {
@@ -47,6 +56,9 @@ namespace UniPurchase
             {
                 return false;
             }
+#else
+            return true;
+#endif
         }
     }
 }

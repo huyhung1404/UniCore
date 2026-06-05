@@ -63,7 +63,6 @@ namespace UniPurchase
         private static PurchaseLifecycleTracker s_lifecycleTracker;
 
         private MonoBehaviour _cachedLifecycleHost;
-        private Func<byte[]> _cachedAppleTangle;
         private Func<byte[]> _cachedGoogleTangle;
         private bool _hasCachedDependencies;
 
@@ -129,9 +128,9 @@ namespace UniPurchase
         }
 
 #if HAS_UNITASK
-        public static async UniTask InitializeAsync(MonoBehaviour lifecycleHost, Func<byte[]> googleTangleData, Func<byte[]> appleTangleData)
+        public static async UniTask InitializeAsync(MonoBehaviour lifecycleHost, Func<byte[]> googleTangleData)
 #else
-        public static async Task InitializeAsync(MonoBehaviour lifecycleHost, Func<byte[]> googleTangleData, Func<byte[]> appleTangleData)
+        public static async Task InitializeAsync(MonoBehaviour lifecycleHost, Func<byte[]> googleTangleData)
 #endif
         {
             if (lifecycleHost == null)
@@ -142,18 +141,9 @@ namespace UniPurchase
                 return;
             }
 
-            if (googleTangleData == null || appleTangleData == null)
-            {
-                var error = "Tangle Data cannot be null for Receipt Validation.";
-                Debug.LogError($"[UniPurchase] {error}");
-                PurchaseEventDispatcher.DispatchInitializeFailed(error);
-                return;
-            }
-
             var inst = Instance;
 
             inst._cachedLifecycleHost = lifecycleHost;
-            inst._cachedAppleTangle = appleTangleData;
             inst._cachedGoogleTangle = googleTangleData;
             inst._hasCachedDependencies = true;
 
@@ -204,7 +194,7 @@ namespace UniPurchase
                 }
             }
 
-            inst._validator = new PurchaseValidator(appleTangleData, googleTangleData);
+            inst._validator = new PurchaseValidator(googleTangleData);
             inst._storeController = UnityIAPServices.StoreController();
 
             inst._storeController.OnProductsFetched += inst.HandleProductsFetched;
@@ -255,7 +245,7 @@ namespace UniPurchase
                 if (inst._hasCachedDependencies)
                 {
                     Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery using cached dependencies...");
-                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedGoogleTangle, inst._cachedAppleTangle);
+                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedGoogleTangle);
                 }
 
                 if (!inst._isInitialized)
@@ -302,7 +292,7 @@ namespace UniPurchase
                 if (inst._hasCachedDependencies)
                 {
                     Debug.LogWarning("[UniPurchase] Store not initialized. Attempting auto-recovery using cached dependencies...");
-                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedGoogleTangle, inst._cachedAppleTangle);
+                    await InitializeAsync(inst._cachedLifecycleHost, inst._cachedGoogleTangle);
                 }
 
                 if (!inst._isInitialized)
@@ -483,7 +473,6 @@ namespace UniPurchase
         {
             _isInitialized = true;
             _isInitializing = false;
-            _cachedAppleTangle = null;
             _cachedGoogleTangle = null;
             _subscriptionHelper = new SubscriptionHelper(_storeController);
             PurchaseEventDispatcher.DispatchInitializeSuccess();
