@@ -16,7 +16,7 @@ namespace UniPurchase
             PurchaseEventDispatcher.OnPurchaseSuccess -= HandlePurchaseSuccess;
         }
 
-        private void HandlePurchaseSuccess(string productId, string transactionId, PendingOrder pendingOrder)
+        private void HandlePurchaseSuccess(string productId, string transactionId, PendingOrder pendingOrder, string customAttribute)
         {
             if (string.IsNullOrEmpty(productId)) return;
 
