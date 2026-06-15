@@ -1,6 +1,5 @@
 #if ENABLE_UNI_PURCHASE
 using UnityEngine;
-using UnityEngine.Purchasing;
 
 namespace UniPurchase
 {
@@ -10,13 +9,13 @@ namespace UniPurchase
         {
             PurchaseEventDispatcher.OnPurchaseSuccess += HandlePurchaseSuccess;
         }
-        
+
         public virtual void Dispose()
         {
             PurchaseEventDispatcher.OnPurchaseSuccess -= HandlePurchaseSuccess;
         }
 
-        private void HandlePurchaseSuccess(string productId, string transactionId, PendingOrder pendingOrder, string customAttribute)
+        private void HandlePurchaseSuccess(string productId, string transactionId, string customAttribute)
         {
             if (string.IsNullOrEmpty(productId)) return;
 

@@ -1,9 +1,15 @@
 #if ENABLE_UNI_PURCHASE
 using UnityEngine;
-using UnityEngine.Purchasing;
 
 namespace UniPurchase
 {
+    public enum PurchaseProductType
+    {
+        Consumable = 0,
+        NonConsumable = 1,
+        Subscription = 2
+    }
+
     public struct ProductPriceInfo
     {
         public string OriginalPrice { get; }
@@ -23,12 +29,12 @@ namespace UniPurchase
     public class ProductData : ScriptableObject
     {
         [SerializeField] private string m_productId;
-        [SerializeField] private ProductType m_productType;
+        [SerializeField] private PurchaseProductType m_productType;
         [SerializeField, Range(0, 1)] private float m_discountPercent;
         [SerializeField] private float m_price;
 
         public string ProductId => m_productId;
-        public ProductType ProductType => m_productType;
+        public PurchaseProductType ProductType => m_productType;
         public float DiscountPercent => m_discountPercent;
         public float Price => m_price;
 
@@ -38,7 +44,7 @@ namespace UniPurchase
             return this;
         }
 
-        public ProductData WithProductType(ProductType type)
+        public ProductData WithProductType(PurchaseProductType type)
         {
             m_productType = type;
             return this;

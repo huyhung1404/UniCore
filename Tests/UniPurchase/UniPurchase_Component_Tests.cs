@@ -54,7 +54,7 @@ namespace UniPurchase.Tests
         public void PurchaseValidator_With_Empty_Receipt_Should_Always_Return_False()
         {
             // ARRANGE: Tạo validator rỗng (Bypass key)
-            var validator = new PurchaseValidator(null, null);
+            var validator = new PurchaseValidator(null);
             
             // ACT
             var result = validator.IsReceiptValid("");
@@ -72,7 +72,7 @@ namespace UniPurchase.Tests
         {
             // ARRANGE: Đăng ký một event lắng nghe
             var isEventTriggered = false;
-            System.Action onStartAction = () => isEventTriggered = true;
+            TransactionDelegate onStartAction = (s) => isEventTriggered = true;
             
             PurchaseEventDispatcher.OnTransactionStart += onStartAction;
             
@@ -81,7 +81,7 @@ namespace UniPurchase.Tests
             resetMethod?.Invoke(null, null);
 
             // Bắn event sau khi đã Reset
-            PurchaseEventDispatcher.DispatchTransactionStart();
+            PurchaseEventDispatcher.DispatchTransactionStart(null);
 
             // ASSERT: Action không được phép chạy vì đã bị xoá khỏi bộ nhớ
             Assert.IsFalse(isEventTriggered, "Subscribers must be cleared after ResetEvents is called to prevent memory leaks.");

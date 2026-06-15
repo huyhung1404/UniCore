@@ -1,4 +1,4 @@
-﻿#if ENABLE_UNI_PURCHASE
+#if ENABLE_UNI_PURCHASE
 using System.Collections;
 using System.Reflection;
 using NUnit.Framework;
@@ -20,19 +20,17 @@ namespace UniPurchase.Tests
         {
             PlayerPrefs.DeleteAll();
 
-            // Reset tĩnh các Event
             var resetMethod = typeof(PurchaseEventDispatcher).GetMethod("ResetEvents", BindingFlags.NonPublic | BindingFlags.Static);
             resetMethod?.Invoke(null, null);
 
-            // Dùng Reflection "Giết" Singleton cũ để mỗi Test Case là một môi trường sạch hoàn toàn
             var instanceField = typeof(PurchaseService).GetField("s_instance", BindingFlags.NonPublic | BindingFlags.Static);
             instanceField?.SetValue(null, null);
 
             _testConfig = ScriptableObject.CreateInstance<PurchaseConfig>();
             var mockProduct = ScriptableObject.CreateInstance<ProductData>();
             mockProduct.WithProductId(k_testProductId)
-                .WithProductType(UnityEngine.Purchasing.ProductType.Consumable);
-            
+                .WithProductType(PurchaseProductType.Consumable);
+
             _testConfig.SetUp(true, new System.Collections.Generic.List<ProductData> { mockProduct });
             _mockRewardHandler = new MockRewardHandler();
             _mockRewardHandler.Initialize();
@@ -45,7 +43,6 @@ namespace UniPurchase.Tests
             Object.DestroyImmediate(_testConfig);
         }
 
-        // Helper: Dùng Reflection tóm lấy cái Private Instance để White-box test
         private object GetPurchaseServiceInstance()
         {
             var prop = typeof(PurchaseService).GetProperty("Instance", BindingFlags.NonPublic | BindingFlags.Static);
@@ -59,12 +56,10 @@ namespace UniPurchase.Tests
         [UnityTest]
         public IEnumerator BuyProduct_With_Empty_Id_Should_Return_Early()
         {
-            // ACT: Gọi hàm Static BuyProduct với chuỗi rỗng
             PurchaseService.BuyProduct("");
 
             yield return null;
 
-            // ASSERT: Đảm bảo giao dịch KHÔNG được kích hoạt
             Assert.IsFalse(PurchaseService.IsProcessing, "Transaction should not start for empty ID.");
         }
 
@@ -72,14 +67,12 @@ namespace UniPurchase.Tests
         public IEnumerator BuyProduct_When_Not_Initialized_Should_Trigger_AutoRecovery_And_Fail()
         {
             var isFailedEventFired = false;
-            PurchaseEventDispatcher.OnPurchaseFailed += (id, reason) => isFailedEventFired = true;
+            PurchaseEventDispatcher.OnPurchaseFailed += (id, reason, _) => isFailedEventFired = true;
 
-            // ACT
             PurchaseService.BuyProduct(k_testProductId);
 
             yield return new WaitForSeconds(0.1f);
 
-            // ASSERT
             Assert.IsTrue(isFailedEventFired, "Auto-recovery should fail gracefully and fire OnPurchaseFailed.");
             Assert.IsFalse(PurchaseService.IsProcessing, "Should not be processing after failed recovery.");
         }
@@ -87,19 +80,16 @@ namespace UniPurchase.Tests
         [UnityTest]
         public IEnumerator BuyProduct_When_Already_Processing_Should_Be_Blocked()
         {
-            // ARRANGE: Tóm lấy private instance và hack biến _activeTransactions
             var serviceInstance = GetPurchaseServiceInstance();
             var activeTxField = typeof(PurchaseService).GetField("_activeTransactions", BindingFlags.NonPublic | BindingFlags.Instance);
             activeTxField?.SetValue(serviceInstance, 1);
 
             LogAssert.Expect(LogType.Warning, "[UniPurchase] A transaction is already in progress.");
 
-            // ACT
             PurchaseService.BuyProduct(k_testProductId);
 
             yield return null;
 
-            // ASSERT
             Assert.AreEqual(1, activeTxField?.GetValue(serviceInstance), "Active transactions count must remain 1.");
         }
 
@@ -110,12 +100,10 @@ namespace UniPurchase.Tests
             var activeTxField = typeof(PurchaseService).GetField("_activeTransactions", BindingFlags.NonPublic | BindingFlags.Instance);
             activeTxField?.SetValue(serviceInstance, 1);
 
-            // ACT
             PurchaseService.RestorePurchases();
 
             yield return null;
 
-            // ASSERT
             Assert.AreEqual(1, activeTxField?.GetValue(serviceInstance), "Restore should early return if already processing.");
         }
 
@@ -126,7 +114,7 @@ namespace UniPurchase.Tests
         [UnityTest]
         public IEnumerator PurchaseFlow_Success_Should_Give_Reward_And_Save()
         {
-            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId,null);
+            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId, null);
             yield return null;
 
             Assert.IsTrue(_mockRewardHandler.IsRewardGiven, "Reward should be given.");
@@ -138,7 +126,7 @@ namespace UniPurchase.Tests
         public IEnumerator PurchaseFlow_Duplicate_Should_Be_Blocked_By_Idempotency()
         {
             LocalTransactionTracker.MarkTransactionAsProcessed(k_testTransactionId);
-            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId,null);
+            PurchaseEventDispatcher.DispatchPurchaseSuccess(k_testProductId, k_testTransactionId, null);
             yield return null;
 
             Assert.IsFalse(_mockRewardHandler.IsRewardGiven, "Duplicate reward blocked.");
@@ -148,94 +136,62 @@ namespace UniPurchase.Tests
         [UnityTest]
         public IEnumerator PurchaseFlow_Failed_Should_Not_Trigger_Rewards()
         {
-            PurchaseEventDispatcher.DispatchPurchaseFailed(k_testProductId, "User cancelled");
+            PurchaseEventDispatcher.DispatchPurchaseFailed(k_testProductId, "User cancelled", null);
             yield return null;
 
             Assert.IsFalse(_mockRewardHandler.IsRewardGiven, "Failed purchases should never give rewards.");
             Assert.IsFalse(LocalTransactionTracker.IsTransactionProcessed(k_testTransactionId), "Failed transactions not saved.");
         }
-        
+
         // ==========================================
         // TEST CASES: ĐÂM XUYÊN SINGLETON (WHITE-BOX TESTING)
         // ==========================================
 
         [UnityTest]
-        public IEnumerator Reflection_HandlePurchasePending_Should_Process_And_Cache_Order()
+        public IEnumerator Reflection_HandleChannelPurchasePending_Should_Cache_Transaction()
         {
             var serviceInstance = GetPurchaseServiceInstance();
 
-            // Khởi tạo Mock Validator và tiêm ngược vào Service
-            var mockValidator = new PurchaseValidator(null, null);
-            typeof(PurchaseValidator).GetField("_isValidatingEnabled", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(mockValidator, false);
-            
-            var validatorField = typeof(PurchaseService).GetField("_validator", BindingFlags.NonPublic | BindingFlags.Instance);
-            validatorField?.SetValue(serviceInstance, mockValidator);
-
-            // Bật cờ Init
             typeof(PurchaseService).GetField("_isInitialized", BindingFlags.NonPublic | BindingFlags.Instance)?.SetValue(serviceInstance, true);
 
             var isSuccessEventFired = false;
-            PurchaseEventDispatcher.OnPurchaseSuccess += (pid, tid,_) => isSuccessEventFired = true;
+            PurchaseEventDispatcher.OnPurchaseSuccess += (pid, tid, _) => isSuccessEventFired = true;
 
-            var fakePendingOrder = ForgeFakePendingOrder(k_testProductId, k_testTransactionId);
-
-            try
-            {
-                var handleMethod = typeof(PurchaseService).GetMethod("HandlePurchasePending", BindingFlags.NonPublic | BindingFlags.Instance);
-                handleMethod?.Invoke(serviceInstance, new object[] { fakePendingOrder });
-            }
-            catch (System.Reflection.TargetInvocationException ex)
-            {
-                Debug.LogWarning($"[Test Expected Exception] Missing Moq Library to mock IOrderInfo: {ex.InnerException?.Message}");
-                Assert.Pass("Test gracefully stopped. Please install Moq to fully test Interface properties.");
-                yield break; 
-            }
+            var handleMethod = typeof(PurchaseService).GetMethod("HandleChannelPurchasePending", BindingFlags.NonPublic | BindingFlags.Instance);
+            handleMethod?.Invoke(serviceInstance, new object[] { k_testProductId, k_testTransactionId });
 
             yield return null;
 
-            Assert.IsTrue(isSuccessEventFired, "HandlePurchasePending via Reflection should dispatch Success Event.");
-            
-            var unconfirmedOrdersField = typeof(PurchaseService).GetField("_unconfirmedOrders", BindingFlags.NonPublic | BindingFlags.Instance);
-            var unconfirmedOrders = unconfirmedOrdersField?.GetValue(serviceInstance) as System.Collections.Generic.Dictionary<string, UnityEngine.Purchasing.PendingOrder>;
-            
-            Assert.IsNotNull(unconfirmedOrders, "Unconfirmed orders dictionary should not be null.");
-            Assert.IsTrue(unconfirmedOrders.ContainsKey(k_testTransactionId), "The fake transaction MUST be cached in _unconfirmedOrders.");
+            Assert.IsTrue(isSuccessEventFired, "HandleChannelPurchasePending should dispatch Success Event.");
+
+            var unconfirmedField = typeof(PurchaseService).GetField("_unconfirmedTransactions", BindingFlags.NonPublic | BindingFlags.Instance);
+            var unconfirmedTransactions = unconfirmedField?.GetValue(serviceInstance) as System.Collections.Generic.Dictionary<string, string>;
+
+            Assert.IsNotNull(unconfirmedTransactions, "Unconfirmed transactions dictionary should not be null.");
+            Assert.IsTrue(unconfirmedTransactions.ContainsKey(k_testTransactionId), "The transaction MUST be cached in _unconfirmedTransactions.");
         }
 
         [UnityTest]
-        public IEnumerator Reflection_ConfirmTransaction_Should_Clear_Order_From_Cache()
+        public IEnumerator Reflection_ConfirmTransaction_Should_Clear_Transaction_From_Cache()
         {
             var serviceInstance = GetPurchaseServiceInstance();
 
-            var unconfirmedOrdersField = typeof(PurchaseService).GetField("_unconfirmedOrders", BindingFlags.NonPublic | BindingFlags.Instance);
-            var unconfirmedOrders = unconfirmedOrdersField?.GetValue(serviceInstance) as System.Collections.Generic.Dictionary<string, UnityEngine.Purchasing.PendingOrder>;
-            
-            var fakeOrder = ForgeFakePendingOrder(k_testProductId, k_testTransactionId);
-            if (unconfirmedOrders != null) unconfirmedOrders[k_testTransactionId] = fakeOrder;
+            var unconfirmedField = typeof(PurchaseService).GetField("_unconfirmedTransactions", BindingFlags.NonPublic | BindingFlags.Instance);
+            var unconfirmedTransactions = unconfirmedField?.GetValue(serviceInstance) as System.Collections.Generic.Dictionary<string, string>;
 
-            Assert.IsTrue(unconfirmedOrders.ContainsKey(k_testTransactionId), "Setup failed: Order not injected.");
+            if (unconfirmedTransactions != null) unconfirmedTransactions[k_testTransactionId] = k_testProductId;
+
+            Assert.IsTrue(unconfirmedTransactions.ContainsKey(k_testTransactionId), "Setup failed: Transaction not injected.");
 
             try
             {
-                // Thay vì serviceInstance.Confirm, ta gọi qua Static API cực gọn
                 PurchaseService.ConfirmTransaction(k_testTransactionId);
             }
             catch { /* Bỏ qua lỗi Native C++ nếu có */ }
 
             yield return null;
 
-            Assert.IsFalse(unconfirmedOrders.ContainsKey(k_testTransactionId), "ConfirmTransaction MUST remove the order from _unconfirmedOrders cache.");
-        }
-
-        // ==========================================
-        // REFLECTION HELPERS (MA THUẬT RÈN ĐỒ GIẢ)
-        // ==========================================
-
-        private UnityEngine.Purchasing.PendingOrder ForgeFakePendingOrder(string productId, string transactionId)
-        {
-            var orderType = typeof(UnityEngine.Purchasing.PendingOrder);
-            var fakeOrder = (UnityEngine.Purchasing.PendingOrder)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(orderType);
-            return fakeOrder;
+            Assert.IsFalse(unconfirmedTransactions.ContainsKey(k_testTransactionId), "ConfirmTransaction MUST remove the transaction from _unconfirmedTransactions cache.");
         }
 
         // ==========================================

@@ -1,13 +1,10 @@
 #if ENABLE_UNI_PURCHASE
-using UnityEngine;
-using UnityEngine.Purchasing;
-
 namespace UniPurchase
 {
     public delegate void InitializeSuccessDelegate();
     public delegate void InitializeFailedDelegate(string error);
     public delegate void TransactionDelegate(string customAttribute);
-    public delegate void PurchaseSuccessDelegate(string productId, string transactionId, PendingOrder pendingOrder, string customAttribute);
+    public delegate void PurchaseSuccessDelegate(string productId, string transactionId, string customAttribute);
     public delegate void PurchaseFailedDelegate(string productId, string reason, string customAttribute);
 
     public static class PurchaseEventDispatcher
@@ -22,7 +19,7 @@ namespace UniPurchase
         public static event PurchaseSuccessDelegate OnPurchaseSuccess;
         public static event PurchaseFailedDelegate OnPurchaseFailed;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetEvents()
         {
             OnInitializeSuccess = null;
@@ -41,7 +38,7 @@ namespace UniPurchase
         public static void DispatchTransactionEnd(string customAttribute) => OnTransactionEnd?.Invoke(customAttribute);
         public static void DispatchTransactionDeferred(string customAttribute) => OnTransactionDeferred?.Invoke(customAttribute);
 
-        public static void DispatchPurchaseSuccess(string productId, string transactionId, PendingOrder pendingOrder, string customAttribute) => OnPurchaseSuccess?.Invoke(productId, transactionId, pendingOrder, customAttribute);
+        public static void DispatchPurchaseSuccess(string productId, string transactionId, string customAttribute) => OnPurchaseSuccess?.Invoke(productId, transactionId, customAttribute);
         public static void DispatchPurchaseFailed(string productId, string reason, string customAttribute) => OnPurchaseFailed?.Invoke(productId, reason, customAttribute);
     }
 }
