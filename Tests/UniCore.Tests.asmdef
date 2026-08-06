@@ -5,9 +5,7 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "UniSignal",
-        "UniVars",
-        "UniPurchase",
-        "Unity.Purchasing"
+        "UniVars"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

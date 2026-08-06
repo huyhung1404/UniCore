@@ -5,7 +5,7 @@ namespace UniCore.Utilities.Pooling
 {
     public class PoolPolicyRegistry
     {
-        private static readonly Dictionary<object, object> s_policies = new();
+        private static readonly Dictionary<object, object> s_policies = new Dictionary<object, object>();
 
         public static void Register<T>(object key, PoolPolicy<T> policy)
         {

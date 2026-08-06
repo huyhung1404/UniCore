@@ -25,13 +25,13 @@ namespace UniCore.Threading
 
         private static readonly DelayedTaskComparer s_comparer = new DelayedTaskComparer();
 
-        private static List<Action> s_pendingImmediate = new(32);
-        private static List<DelayedTask> s_pendingDelayed = new(16);
+        private static List<Action> s_pendingImmediate = new List<Action>(32);
+        private static List<DelayedTask> s_pendingDelayed = new List<DelayedTask>(16);
         private static int s_spinLockIndicator;
 
-        private static List<Action> s_executingImmediate = new(32);
-        private static List<DelayedTask> s_executingDelayedTemp = new(16);
-        private static readonly List<DelayedTask> s_mainDelayed = new(32);
+        private static List<Action> s_executingImmediate = new List<Action>(32);
+        private static List<DelayedTask> s_executingDelayedTemp = new List<DelayedTask>(16);
+        private static readonly List<DelayedTask> s_mainDelayed = new List<DelayedTask>(32);
 
         private static UnityMainThreadDispatcher s_instance;
 

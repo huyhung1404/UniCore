@@ -2,7 +2,7 @@
 {
     public class ClassPolicy<T> : PoolPolicy<T> where T : class, new()
     {
-        public override T Create() => new();
+        public override T Create() => new T();
 
         public override void OnGet(T obj)
         {

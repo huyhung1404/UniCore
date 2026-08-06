@@ -4,7 +4,7 @@ namespace UniCore.Utilities.Pooling
 {
     public static class PoolManager
     {
-        private static readonly Dictionary<object, object> s_pools = new();
+        private static readonly Dictionary<object, object> s_pools = new Dictionary<object, object>();
 
         public static Pool<T> GetPool<T>(object key, int init = 0)
         {

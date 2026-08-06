@@ -24,7 +24,7 @@ namespace UniCore.Signal
 
         public static readonly SignalScope All = new SignalScope(ulong.MaxValue);
 
-        public static SignalScope operator |(SignalScope a, SignalScope b) => new(a.Mask | b.Mask);
+        public static SignalScope operator |(SignalScope a, SignalScope b) => new SignalScope(a.Mask | b.Mask);
 
         public bool Intersects(SignalScope other) => (Mask & other.Mask) != 0;
 

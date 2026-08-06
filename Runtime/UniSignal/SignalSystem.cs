@@ -17,7 +17,7 @@ namespace UniCore.Signal
 
     public static class SignalSystem
     {
-        internal static readonly List<IListenerList> s_ActiveLists = new(32);
+        internal static readonly List<IListenerList> s_ActiveLists = new List<IListenerList>(32);
 
 #if SIGNAL_THREAD_SAFE
         private static readonly object s_lock = new object();

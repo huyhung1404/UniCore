@@ -24,8 +24,8 @@ namespace UniCore.Signal
 #if UNITY_EDITOR
         public Type SignalType => typeof(T);
 #endif
-        private readonly List<ISignalListener<T>> _list = new(8);
-        private readonly List<ISignalListener<T>> _pendingAdds = new(4);
+        private readonly List<ISignalListener<T>> _list = new List<ISignalListener<T>>(8);
+        private readonly List<ISignalListener<T>> _pendingAdds = new List<ISignalListener<T>>(4);
 
 #if SIGNAL_THREAD_SAFE
         private int _spinLockIndicator;
